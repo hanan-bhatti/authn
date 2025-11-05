@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= pageTitle || 'Authentication' %></title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .auth-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .auth-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+
+        .icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            color: #667eea;
+        }
+
+        .danger-icon {
+            color: #e74c3c;
+        }
+
+        .success-icon {
+            color: #27ae60;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 2rem;
+            font-weight: 600;
+        }
+
+        .subtitle {
+            color: #7f8c8d;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+            line-height: 1.5;
+        }
+
+        .user-info {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .user-info strong {
+            color: #2c3e50;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+
+        input[type="text"], 
+        input[type="password"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e6ed;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="text"]:focus, 
+        input[type="password"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .confirmation-text {
+            background: #fff5f5;
+            border: 2px solid #fed7d7;
+            color: #c53030;
+            font-family: monospace;
+            letter-spacing: 1px;
+        }
+
+        .danger-zone {
+            background: #fff5f5;
+            border: 2px solid #feb2b2;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .danger-zone h3 {
+            color: #c53030;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .warning-list {
+            text-align: left;
+            margin: 15px 0;
+        }
+
+        .warning-list li {
+            color: #742a2a;
+            margin-bottom: 8px;
+            padding-left: 10px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+            min-width: 120px;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+
+        .error-message {
+            background: #fff5f5;
+            color: #c53030;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #e53e3e;
+        }
+
+        .success-message {
+            background: #f0fff4;
+            color: #276749;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #48bb78;
+        }
+
+        .loading {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 600px) {
+            .auth-container {
+                padding: 30px 20px;
+                margin: 10px;
+            }
+            
+            .icon {
+                font-size: 3rem;
+            }
+            
+            h1 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <% if (locals.isConfirmDeletion) { %>
+            <!-- Account Deletion Confirmation Page -->
+            <div class="icon danger-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h1>Confirm Account Deletion</h1>
+            <p class="subtitle">You're about to permanently delete your account. This action cannot be undone.</p>
+            
+            <div class="user-info">
+                <p><strong>Account:</strong> <%= userEmail %></p>
+                <p><strong>Name:</strong> <%= userName %></p>
+            </div>
+
+            <div class="danger-zone">
+                <h3><i class="fas fa-skull-crossbones"></i> Warning</h3>
+                <ul class="warning-list">
+                    <li>All your data will be permanently deleted</li>
+                    <li>Your profile and content will be removed</li>
+                    <li>This action cannot be reversed</li>
+                    <li>You will lose access to all services</li>
+                </ul>
+            </div>
+
+            <% if (locals.errorMessage) { %>
+                <div class="error-message">
+                    <i class="fas fa-exclamation-circle"></i> <%= errorMessage %>
+                </div>
+            <% } %>
+
+            <form action="/api/users/confirm-deletion" method="POST" id="deletionForm">
+                <input type="hidden" name="token" value="<%= deletionToken %>">
+                <% if (locals.csrfToken) { %>
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <% } %>
+
+                <div class="form-group">
+                    <label for="confirmText">Type "DELETE MY ACCOUNT" to confirm:</label>
+                    <input type="text" id="confirmText" name="confirmText" 
+                           class="confirmation-text" 
+                           placeholder="DELETE MY ACCOUNT" 
+                           autocomplete="off"
+                           required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Enter your password to confirm:</label>
+                    <input type="password" id="password" name="password" 
+                           placeholder="Enter your password"
+                           autocomplete="current-password">
+                </div>
+
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <span>Deleting account...</span>
+                </div>
+
+                <div>
+                    <button type="submit" class="btn btn-danger" id="deleteBtn" disabled>
+                        <i class="fas fa-trash"></i> Delete My Account
+                    </button>
+                    <a href="/" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Cancel
+                    </a>
+                </div>
+            </form>
+
+        <% } else if (locals.isDeletionSuccess) { %>
+            <!-- Deletion Success Page -->
+            <div class="icon success-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h1>Account Deleted Successfully</h1>
+            <p class="subtitle">Your account has been permanently deleted.</p>
+            
+            <div class="success-message">
+                <p><strong>Account <%= userEmail %> has been deleted.</strong></p>
+                <p>All your data has been removed from our systems.</p>
+                <p>Thank you for using our service.</p>
+            </div>
+
+            <div>
+                <a href="/" class="btn btn-primary">
+                    <i class="fas fa-home"></i> Back to Home
+                </a>
+            </div>
+
+        <% } else if (locals.errorMessage) { %>
+            <!-- Error Page -->
+            <div class="icon danger-icon">
+                <i class="fas fa-exclamation-circle"></i>
+            </div>
+            <h1>Error</h1>
+            <p class="subtitle">Something went wrong with your request.</p>
+            
+            <div class="error-message">
+                <%= errorMessage %>
+            </div>
+
+            <% if (locals.showBackToLogin) { %>
+                <div>
+                    <a href="/login" class="btn btn-primary">
+                        <i class="fas fa-sign-in-alt"></i> Back to Login
+                    </a>
+                    <a href="/" class="btn btn-secondary">
+                        <i class="fas fa-home"></i> Home
+                    </a>
+                </div>
+            <% } %>
+
+        <% } else { %>
+            <!-- Default Auth Page (your original content goes here) -->
+            <div class="icon">
+                <i class="fas fa-user-shield"></i>
+            </div>
+            <h1>Authentication</h1>
+            <p class="subtitle">Please log in to continue</p>
+            
+            <!-- Your original auth.html content should be placed here -->
+            <div>
+                <a href="/login" class="btn btn-primary">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </a>
+                <a href="/register" class="btn btn-secondary">
+                    <i class="fas fa-user-plus"></i> Register
+                </a>
+            </div>
+        <% } %>
+    </div>
+
+    <script>
+        // Only run deletion confirmation script if on that page
+        if (document.getElementById('deletionForm')) {
+            const confirmInput = document.getElementById('confirmText');
+            const deleteBtn = document.getElementById('deleteBtn');
+            const form = document.getElementById('deletionForm');
+            const loading = document.getElementById('loading');
+
+            // Enable delete button only when correct text is entered
+            confirmInput.addEventListener('input', function() {
+                if (this.value === 'DELETE MY ACCOUNT') {
+                    deleteBtn.disabled = false;
+                    deleteBtn.style.opacity = '1';
+                } else {
+                    deleteBtn.disabled = true;
+                    deleteBtn.style.opacity = '0.6';
+                }
+            });
+
+            // Show loading state on form submission
+            form.addEventListener('submit', function() {
+                loading.style.display = 'flex';
+                deleteBtn.disabled = true;
+                deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+            });
+
+            // Auto-focus the confirmation input
+            confirmInput.focus();
+        }
+    </script>
+</body>
+</html>

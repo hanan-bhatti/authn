@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authn - Authentication</title>
+    <link rel="icon"
+        href="https://spotless-orange-flea.myfilebase.com/ipfs/QmSaqA9tpYReUdr4Xw3uyvsCts5xTeHKsfdiHDiDjTUN4W"
+        type="image/png">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/loader.css">
+    <link rel="stylesheet" href="css/toaststyles.css">
+    <link rel="stylesheet" href="css/boxicons.min.css">
+</head>
+
+<body>
+    <!-- Theme Toggle -->
+    <div class="theme-toggle" id="theme-toggle">
+        <i class="bx bx-moon" id="theme-icon"></i>
+    </div>
+
+    <div class="auth-container">
+        <div class="auth-card fade-in">
+            <!-- Login Form -->
+            <div id="login-form" class="auth-step">
+                <div class="auth-header">
+                    <h1 class="auth-title">Welcome back</h1>
+                    <p class="auth-subtitle">Sign in to your account</p>
+                </div>
+
+                <!-- Error Container for Login -->
+                <div class="error-container"></div>
+
+                <form class="auth-form" id="loginForm">
+                    <div id="login-alert"></div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="login-identifier">Email or Username</label>
+                        <input type="text" id="login-identifier" name="identifier" class="form-input" required>
+                        <span class="form-error" id="login-identifier-error"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="login-password">Password</label>
+                        <div class="input-group">
+                            <input type="password" id="login-password" name="password" class="form-input" required>
+                            <i class="bx bx-hide input-icon" id="login-password-toggle"></i>
+                        </div>
+                        <span class="form-error" id="login-password-error"></span>
+                    </div>
+
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="remember-me" name="rememberMe" class="checkbox">
+                        <label for="remember-me" class="checkbox-label">Remember me for 30 days</label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Sign In</button>
+                </form>
+
+                <div class="auth-footer">
+                    <p><a href="#" class="auth-link" id="show-forgot-password">Forgot your password?</a></p>
+                    <p style="margin-top: 1rem;">Don't have an account? <a href="#" class="auth-link"
+                            id="show-register">Sign up</a></p>
+                </div>
+            </div>
+
+            <!-- 2FA Verification Form -->
+            <div id="two-factor-form" class="auth-step hidden">
+                <div class="auth-header">
+                    <div class="auth-logo"><i class="bx bx-lock-alt"></i></div>
+                    <h1 class="auth-title">Two-Factor Authentication</h1>
+                    <p class="auth-subtitle">Enter the 6-digit code from your authenticator app</p>
+                </div>
+
+                <!-- Error Container for 2FA -->
+                <div class="error-container"></div>
+
+                <form class="auth-form" id="twoFactorForm">
+                    <div id="two-factor-alert"></div>
+
+                    <div class="two-factor-grid">
+                        <input type="text" class="two-factor-input" maxlength="1" data-index="0">
+                        <input type="text" class="two-factor-input" maxlength="1" data-index="1">
+                        <input type="text" class="two-factor-input" maxlength="1" data-index="2">
+                        <input type="text" class="two-factor-input" maxlength="1" data-index="3">
+                        <input type="text" class="two-factor-input" maxlength="1" data-index="4">
+                        <input type="text" class="two-factor-input" maxlength="1" data-index="5">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Verify Code</button>
+                    <button type="button" class="btn btn-secondary" id="show-backup-code"
+                        style="margin-top: 0.5rem;">Use Backup Code</button>
+                </form>
+
+                <div class="auth-footer">
+                    <p><a href="#" class="auth-link" id="back-to-login-from-2fa">← Back to login</a></p>
+                </div>
+            </div>
+
+            <!-- Backup Code Form -->
+            <div id="backup-code-form" class="auth-step hidden">
+                <div class="auth-header">
+                    <div class="auth-logo"><i class="bx bx-key"></i></div>
+                    <h1 class="auth-title">Backup Code</h1>
+                    <p class="auth-subtitle">Enter one of your backup codes</p>
+                </div>
+
+                <!-- Error Container for Backup Code -->
+                <div class="error-container"></div>
+
+                <form class="auth-form" id="backupCodeForm">
+                    <div id="backup-code-alert"></div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="backup-code">Backup Code</label>
+                        <input type="text" id="backup-code" name="backupCode" class="form-input" placeholder="XXXXXXXX"
+                            maxlength="8" required>
+                        <span class="form-error" id="backup-code-error"></span>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Verify Code</button>
+                </form>
+
+                <div class="auth-footer">
+                    <p><a href="#" class="auth-link" id="back-to-2fa">← Back to 2FA</a></p>
+                </div>
+            </div>
+
+            <!-- Register Form -->
+            <div id="register-form" class="auth-step hidden">
+                <div class="auth-header">
+                    <h1 class="auth-title">Create account</h1>
+                    <p class="auth-subtitle">Create your account</p>
+                </div>
+
+                <!-- Error Container for Registration -->
+                <div class="error-container"></div>
+
+                <form class="auth-form" id="registerForm">
+                    <div id="register-alert"></div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="first-name">First Name *</label>
+                        <input type="text" id="first-name" name="firstName" class="form-input" required>
+                        <span class="form-error" id="first-name-error"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="last-name">Last Name (optional)</label>
+                        <input type="text" id="last-name" name="lastName" class="form-input">
+                        <span class="form-error" id="last-name-error"></span>
+                    </div>
+
+                    <div class="form-group" style="position: relative;">
+                        <label class="form-label" for="username">Username *</label>
+                        <div class="input-group">
+                            <input type="text" id="username" name="username" class="form-input" required>
+                            <i class=" input-icon" id="username-status"></i>
+                        </div>
+                        <span class="form-error" id="username-error"></span>
+                        <div id="username-suggestions" class="username-suggestions hidden"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="email">Email *</label>
+                        <input type="email" id="email" name="email" class="form-input" required>
+                        <span class="form-error" id="email-error"></span>
+                    </div>
+
+                    
+
+                    <div class="form-group">
+                        <label class="form-label" for="password">Password *</label>
+                        <div class="input-group">
+                            <input type="password" id="password" name="password" class="form-input" required>
+                            <i class="bx bx-hide input-icon" id="password-toggle"></i>
+                        </div>
+                        <div class="password-strength">
+                            <div class="strength-bar">
+                                <div class="strength-fill" id="strength-fill"></div>
+                            </div>
+                            <div class="strength-text" id="strength-text">Enter a password</div>
+                        </div>
+                        <span class="form-error" id="password-error"></span>
+                    </div>
+
+                    
+                    <p>By creating account, you agree to our <a href="/terms" class="auth-link">Terms of Service</a> and <a
+                            href="/privacy" class="auth-link">Privacy Policy</a>.</p>
+                    <button type="submit" class="btn btn-primary">Create Account</button>
+                </form>
+
+                <div class="auth-footer">
+                    <p>Already have an account? <a href="#" class="auth-link" id="back-to-login">Sign in</a></p>
+                </div>
+            </div>
+
+            <!-- Email Verification Form -->
+            <div id="email-verification-form" class="auth-step hidden">
+                <div class="auth-header">
+                    <div class="auth-logo"><i class="bx bx-envelope"></i></div>
+                    <h1 class="auth-title">Verify Email</h1>
+                    <p class="auth-subtitle">Enter the 6-digit code sent to your email</p>
+                </div>
+
+                <!-- Error Container for Email Verification -->
+                <div class="error-container"></div>
+
+                <form class="auth-form" id="emailVerificationForm">
+                    <div id="email-verification-alert"></div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="verification-code">Verification Code</label>
+                        <input type="text" id="verification-code" name="otp" class="form-input" maxlength="6"
+                            pattern="[0-9]{6}" required>
+                        <span class="form-error" id="verification-code-error"></span>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Verify Email</button>
+                    <button type="button" class="btn btn-secondary" id="resend-verification"
+                        style="margin-top: 0.5rem;">Resend Code</button>
+                </form>
+
+                <div class="auth-footer">
+                    <p><a href="#" class="auth-link" id="back-to-login-from-verification">← Back to login</a></p>
+                </div>
+            </div>
+
+            <!-- Forgot Password Form -->
+            <div id="forgot-password-form" class="auth-step hidden">
+                <div class="auth-header">
+                    <div class="auth-logo"><i class="bx bx-refresh"></i></div>
+                    <h1 class="auth-title">Reset Password</h1>
+                    <p class="auth-subtitle">Enter your email to receive reset instructions</p>
+                </div>
+
+                <!-- Error Container for Forgot Password -->
+                <div class="error-container"></div>
+
+                <form class="auth-form" id="forgotPasswordForm">
+                    <div id="forgot-password-alert"></div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="forgot-email">Email</label>
+                        <input type="email" id="forgot-email" name="email" class="form-input" required>
+                        <span class="form-error" id="forgot-email-error"></span>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Send Reset Link</button>
+                </form>
+
+                <div class="auth-footer">
+                    <p><a href="#" class="auth-link" id="back-to-login-from-forgot">← Back to login</a></p>
+                </div>
+            </div>
+
+            <div id="toastContainer" class="toast-container"></div>
+            <div id="loadingOverlay" class="loading-overlay">
+                <svg class="pl" viewBox="0 0 160 160" width="160px" height="160px" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#000"></stop>
+                            <stop offset="100%" stop-color="#fff"></stop>
+                        </linearGradient>
+                        <mask id="mask1">
+                            <rect x="0" y="0" width="160" height="160" fill="url(#grad)"></rect>
+                        </mask>
+                        <mask id="mask2">
+                            <rect x="28" y="28" width="104" height="104" fill="url(#grad)"></rect>
+                        </mask>
+                    </defs>
+
+                    <g>
+                        <g class="pl__ring-rotate">
+                            <circle class="pl__ring-stroke" cx="80" cy="80" r="72" fill="none" stroke="hsl(223,90%,55%)"
+                                stroke-width="16" stroke-dasharray="452.39 452.39" stroke-dashoffset="452"
+                                stroke-linecap="round" transform="rotate(-45,80,80)"></circle>
+                        </g>
+                    </g>
+                    <g mask="url(#mask1)">
+                        <g class="pl__ring-rotate">
+                            <circle class="pl__ring-stroke" cx="80" cy="80" r="72" fill="none" stroke="hsl(193,90%,55%)"
+                                stroke-width="16" stroke-dasharray="452.39 452.39" stroke-dashoffset="452"
+                                stroke-linecap="round" transform="rotate(-45,80,80)"></circle>
+                        </g>
+                    </g>
+
+                    <g>
+                        <g stroke-width="4" stroke-dasharray="12 12" stroke-dashoffset="12" stroke-linecap="round"
+                            transform="translate(80,80)">
+                            <polyline class="pl__tick" stroke="hsl(223,10%,90%)" points="0,2 0,14"
+                                transform="rotate(-135,0,0) translate(0,40)"></polyline>
+                            <polyline class="pl__tick" stroke="hsl(223,10%,90%)" points="0,2 0,14"
+                                transform="rotate(-90,0,0) translate(0,40)"></polyline>
+                            <polyline class="pl__tick" stroke="hsl(223,10%,90%)" points="0,2 0,14"
+                                transform="rotate(-45,0,0) translate(0,40)"></polyline>
+                            <polyline class="pl__tick" stroke="hsl(223,10%,90%)" points="0,2 0,14"
+                                transform="rotate(0,0,0) translate(0,40)"></polyline>
+                            <polyline class="pl__tick" stroke="hsl(223,10%,90%)" points="0,2 0,14"
+                                transform="rotate(45,0,0) translate(0,40)"></polyline>
+                            <polyline class="pl__tick" stroke="hsl(223,10%,90%)" points="0,2 0,14"
+                                transform="rotate(90,0,0) translate(0,40)"></polyline>
+                            <polyline class="pl__tick" stroke="hsl(223,10%,90%)" points="0,2 0,14"
+                                transform="rotate(135,0,0) translate(0,40)"></polyline>
+                            <polyline class="pl__tick" stroke="hsl(223,10%,90%)" points="0,2 0,14"
+                                transform="rotate(180,0,0) translate(0,40)"></polyline>
+                        </g>
+                    </g>
+                    <g mask="url(#mask1)">
+                        <g stroke-width="4" stroke-dasharray="12 12" stroke-dashoffset="12" stroke-linecap="round"
+                            transform="translate(80,80)">
+                            <polyline class="pl__tick" stroke="hsl(223,90%,80%)" points="0,2 0,14"
+                                transform="rotate(-135,0,0) translate(0,40)"></polyline>
+                            <polyline class="pl__tick" stroke="hsl(223,90%,80%)" points="0,2 0,14"
+                                transform="rotate(-90,0,0) translate(0,40)"></polyline>
+                            <polyline class="pl__tick" stroke="hsl(223,90%,80%)" points="0,2 0,14"
+                                transform="rotate(-45,0,0) translate(0,40)"></polyline>
+                            <polyline class="pl__tick" stroke="hsl(223,90%,80%)" points="0,2 0,14"
+                                transform="rotate(0,0,0) translate(0,40)"></polyline>
+                            <polyline class="pl__tick" stroke="hsl(223,90%,80%)" points="0,2 0,14"
+                                transform="rotate(45,0,0) translate(0,40)"></polyline>
+                            <polyline class="pl__tick" stroke="hsl(223,90%,80%)" points="0,2 0,14"
+                                transform="rotate(90,0,0) translate(0,40)"></polyline>
+                            <polyline class="pl__tick" stroke="hsl(223,90%,80%)" points="0,2 0,14"
+                                transform="rotate(135,0,0) translate(0,40)"></polyline>
+                            <polyline class="pl__tick" stroke="hsl(223,90%,80%)" points="0,2 0,14"
+                                transform="rotate(180,0,0) translate(0,40)"></polyline>
+                        </g>
+                    </g>
+
+                    <g>
+                        <g transform="translate(64,28)">
+                            <g class="pl__arrows" transform="rotate(45,16,52)">
+                                <path fill="hsl(3,90%,55%)"
+                                    d="M17.998,1.506l13.892,43.594c.455,1.426-.56,2.899-1.998,2.899H2.108c-1.437,0-2.452-1.473-1.998-2.899L14.002,1.506c.64-2.008,3.356-2.008,3.996,0Z">
+                                </path>
+                                <path fill="hsl(223,10%,90%)"
+                                    d="M14.009,102.499L.109,58.889c-.453-1.421,.559-2.889,1.991-2.889H29.899c1.433,0,2.444,1.468,1.991,2.889l-13.899,43.61c-.638,2.001-3.345,2.001-3.983,0Z">
+                                </path>
+                            </g>
+                        </g>
+                    </g>
+                    <g mask="url(#mask2)">
+                        <g transform="translate(64,28)">
+                            <g class="pl__arrows" transform="rotate(45,16,52)">
+                                <path fill="hsl(333,90%,55%)"
+                                    d="M17.998,1.506l13.892,43.594c.455,1.426-.56,2.899-1.998,2.899H2.108c-1.437,0-2.452-1.473-1.998-2.899L14.002,1.506c.64-2.008,3.356-2.008,3.996,0Z">
+                                </path>
+                                <path fill="hsl(223,90%,80%)"
+                                    d="M14.009,102.499L.109,58.889c-.453-1.421,.559-2.889,1.991-2.889H29.899c1.433,0,2.444,1.468,1.991,2.889l-13.899,43.61c-.638,2.001-3.345,2.001-3.983,0Z">
+                                </path>
+                            </g>
+                        </g>
+                    </g>
+                </svg>
+            </div>
+        </div>
+        <script src="js/app.js"></script>
+        <script src="js/routing.js"></script>
+        <script src="js/sw.js"></script>
+</body>
+
+</html>

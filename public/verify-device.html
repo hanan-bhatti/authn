@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Device - TransitFlow</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo h1 {
+            color: #333;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+            text-align: center;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.2s ease;
+            background: #fafbfc;
+        }
+
+        input[type="text"]:focus,
+        input[type="password"]:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+        }
+
+        .verify-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            margin-top: 10px;
+        }
+
+        .verify-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .verify-btn:active {
+            transform: translateY(0);
+        }
+
+        .verify-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .alert {
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .alert.error {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+
+        .alert.success {
+            background: #f0fdf4;
+            color: #16a34a;
+            border: 1px solid #bbf7d0;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 15px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 6px;
+            line-height: 1.4;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 30px 24px;
+            }
+
+            body {
+                padding: 16px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="logo">
+            <h1>🚌 TransitFlow</h1>
+        </div>
+
+        <p class="subtitle">
+            Verify your new device to continue. Check your email for the verification link or enter the token manually
+            below.
+        </p>
+
+        <div id="alert" class="alert" style="display: none;"></div>
+
+        <form id="verificationForm">
+            <div class="form-group">
+                <label for="token">Verification Token</label>
+                <input type="text" id="token" name="token" required placeholder="Enter verification code">
+                <div class="help-text">Enter the code from your email</div>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required placeholder="Enter your password">
+                <div class="help-text">Confirm your identity with your password</div>
+            </div>
+
+            <button type="submit" class="verify-btn" id="verifyBtn">
+                Verify Device
+            </button>
+
+            <div class="loading" id="loading">
+                <span class="spinner"></span>
+                Verifying device...
+            </div>
+        </form>
+    </div>
+
+    <script>
+        const form = document.getElementById('verificationForm');
+        const alertDiv = document.getElementById('alert');
+        const verifyBtn = document.getElementById('verifyBtn');
+        const loading = document.getElementById('loading');
+
+        function showAlert(message, type = 'error') {
+            alertDiv.textContent = message;
+            alertDiv.className = `alert ${type}`;
+            alertDiv.style.display = 'block';
+
+            // Auto-hide success messages
+            if (type === 'success') {
+                setTimeout(() => {
+                    alertDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        function hideAlert() {
+            alertDiv.style.display = 'none';
+        }
+
+        function setLoading(isLoading) {
+            if (isLoading) {
+                verifyBtn.disabled = true;
+                verifyBtn.textContent = 'Verifying...';
+                loading.style.display = 'block';
+            } else {
+                verifyBtn.disabled = false;
+                verifyBtn.textContent = 'Verify Device';
+                loading.style.display = 'none';
+            }
+        }
+
+        // Get device information - must match the deviceId generation used in login
+        function getDeviceInfo() {
+            const userAgent = navigator.userAgent;
+            const platform = navigator.platform;
+            const language = navigator.language;
+            const screenResolution = `${screen.width}x${screen.height}`;
+            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+            // Simple device detection
+            let deviceType = 'desktop';
+            if (/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent)) {
+                deviceType = 'mobile';
+            } else if (/iPad/i.test(userAgent)) {
+                deviceType = 'tablet';
+            }
+
+            // Browser detection
+            let browser = 'unknown';
+            if (userAgent.includes('Chrome')) browser = 'Chrome';
+            else if (userAgent.includes('Firefox')) browser = 'Firefox';
+            else if (userAgent.includes('Safari')) browser = 'Safari';
+            else if (userAgent.includes('Edge')) browser = 'Edge';
+
+            // Create consistent deviceId (this should match your login deviceId generation)
+            const deviceString = userAgent + platform + screenResolution;
+            const deviceId = btoa(deviceString).replace(/[+/=]/g, '').substring(0, 32);
+
+            return {
+                userAgent,
+                platform,
+                language,
+                deviceType,
+                browser,
+                screenResolution,
+                timezone,
+                deviceName: `${browser} on ${platform}`,
+                deviceId
+            };
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideAlert();
+
+            const formData = new FormData(form);
+            const token = formData.get('token').trim();
+            const password = formData.get('password');
+
+            if (!token || !password) {
+                showAlert('Please fill in all fields');
+                return;
+            }
+
+            setLoading(true);
+
+            try {
+                const deviceInfo = getDeviceInfo();
+                console.log('Sending device info:', deviceInfo); // Debug log
+                console.log('Token being sent:', token); // Debug log
+
+                const response = await fetch('/api/auth/verify-device', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Device-Info': JSON.stringify(deviceInfo)
+                    },
+                    body: JSON.stringify({
+                        token,
+                        password
+                    })
+                });
+
+                const data = await response.json();
+                console.log('Server response:', data); // Debug log
+
+                if (response.ok && data.success) {
+                    showAlert('Device verified successfully! Redirecting...', 'success');
+
+                    // Redirect after successful verification
+                    setTimeout(() => {
+                        if (data.data.requiresEmailVerification) {
+                            window.location.href = '/verify-email';
+                        } else {
+                            window.location.href = '/dashboard';
+                        }
+                    }, 2000);
+
+                } else {
+                    console.error('Verification failed:', data); // Debug log
+                    showAlert(data.message || 'Verification failed. Please try again.');
+                }
+
+            } catch (error) {
+                console.error('Network/Parse error:', error);
+                showAlert('Network error. Please check your connection and try again.');
+            } finally {
+                setLoading(false);
+            }
+        });
+
+        // Auto-fill token from URL parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const tokenFromUrl = urlParams.get('token');
+
+        if (tokenFromUrl) {
+            document.getElementById('token').value = tokenFromUrl;
+            document.getElementById('password').focus();
+        } else {
+            document.getElementById('token').focus();
+        }
+
+        // Handle paste for verification code
+        document.getElementById('token').addEventListener('paste', (e) => {
+            setTimeout(() => {
+                const pastedText = e.target.value.trim();
+                if (pastedText.length >= 6) {
+                    document.getElementById('password').focus();
+                }
+            }, 10);
+        });
+    </script>
+</body>
+
+</html>

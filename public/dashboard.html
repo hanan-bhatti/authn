@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title></title>
+    <link rel="icon" id="favicon"
+        href="https://spotless-orange-flea.myfilebase.com/ipfs/QmSaqA9tpYReUdr4Xw3uyvsCts5xTeHKsfdiHDiDjTUN4W"
+        type="image/png">
+    <link rel="stylesheet" href="css/dash.css">
+    <link rel="stylesheet" href="css/loader.css">
+    <link href="css/all.min.css" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <span>Dashboard</span>
+            </div>
+            <button class="sidebar-toggle" id="sidebarToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+
+        <nav class="sidebar-nav">
+            <ul>
+                <li><a href="#dashboard" class="nav-link active" data-section="dashboard">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Dashboard</span>
+                    </a></li>
+                <li><a href="#profile" class="nav-link" data-section="profile">
+                        <i class="fas fa-user"></i>
+                        <span>Profile</span>
+                    </a></li>
+                <li><a href="#security" class="nav-link" data-section="security">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>Security</span>
+                    </a></li>
+                <li><a href="#notifications" class="nav-link" data-section="notifications">
+                        <i class="fas fa-bell"></i>
+                        <span>Notifications</span>
+                        <span class="notification-badge" id="notificationBadge">0</span>
+                    </a></li>
+                <li><a href="#settings" class="nav-link" data-section="settings">
+                        <i class="fas fa-cog"></i>
+                        <span>Settings</span>
+                    </a></li>
+                <li><a href="#devices" class="nav-link" data-section="devices">
+                        <i class="fas fa-mobile-alt"></i>
+                        <span>Devices</span>
+                    </a></li>
+                <li><a href="#sessions" class="nav-link" data-section="sessions">
+                        <i class="fas fa-history"></i>
+                        <span>Sessions</span>
+                    </a></li>
+                <li><a href="#analytics" class="nav-link" data-section="analytics">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Analytics</span>
+                    </a></li>
+                <li><a href="#audit-logs" class="nav-link" data-section="audit-logs">
+                        <i class="fas fa-file-alt"></i>
+                        <span>Audit Logs</span>
+                    </a></li>
+                <li class="admin-only"><a href="#admin" class="nav-link" data-section="admin">
+                        <i class="fas fa-users-cog"></i>
+                        <span>Admin Panel</span>
+                    </a></li>
+            </ul>
+        </nav>
+
+        <div class="sidebar-footer">
+            <button class="logout-btn" id="logoutBtn">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="top-header">
+            <div class="header-left">
+                <button class="mobile-sidebar-toggle" id="mobileSidebarToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h1 id="pageTitle">Dashboard</h1>
+            </div>
+            <div class="header-right">
+                <div class="user-menu">
+                    <img src="" alt="Profile" class="user-avatar" id="userAvatar">
+                    <span class="user-name" id="userName">Loading...</span>
+                </div>
+                <div class="theme-selector">
+                    <button id="themeToggle" class="theme-toggle">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <div class="theme-dropdown" id="themeDropdown">
+                        <div class="theme-option" data-theme="light">
+                            <i class="fas fa-sun"></i>
+                            <span>Light</span>
+                        </div>
+                        <div class="theme-option" data-theme="dark">
+                            <i class="fas fa-moon"></i>
+                            <span>Dark</span>
+                        </div>
+                        <div class="theme-option" data-theme="auto">
+                            <i class="fas fa-adjust"></i>
+                            <span>Auto</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Section -->
+        <section id="dashboard-section" class="content-section active">
+            <div class="dashboard-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="accountAge">0</h3>
+                        <p>Days Active</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-sign-in-alt"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="totalLogins">0</h3>
+                        <p>Total Logins</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="avgSessions">0</h3>
+                        <p>Avg Sessions/Day</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="securityScore">100%</h3>
+                        <p>Security Score</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Quick Actions</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="quick-actions">
+                            <button class="action-btn" data-action="change-password">
+                                <i class="fas fa-key"></i>
+                                Change Password
+                            </button>
+                            <button class="action-btn" data-action="setup-2fa" id="setup-2fa-btn">
+                                <i class="fas fa-mobile-alt"></i>
+                                Setup 2 Step Factor Authentication
+                            </button>
+                            <button class="action-btn" data-action="export-data">
+                                <i class="fas fa-download"></i>
+                                Export Data
+                            </button>
+                            <button class="action-btn" data-action="update-location">
+                                <i class="fas fa-map-marker-alt"></i>
+                                Update Location
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Recent Activity</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="activity-list" id="recentActivity">
+                            <div class="loading">Loading recent activity...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Profile Section -->
+        <section id="profile-section" class="content-section">
+            <div class="profile-container">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Profile Information</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="profileForm" class="profile-form">
+                            <div class="profile-avatar-section">
+                                <div class="avatar-container">
+                                    <img src="" alt="Profile Picture" id="profilePicture" class="profile-picture">
+                                    <button type="button" class="avatar-upload-btn" id="avatarUploadBtn">
+                                        <i class="fas fa-camera"></i>
+                                    </button>
+                                    <input type="file" id="avatarInput" accept="image/*" hidden>
+                                </div>
+                            </div>
+
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="firstName">First Name</label>
+                                    <input type="text" id="firstName" name="firstName">
+                                </div>
+                                <div class="form-group">
+                                    <label for="lastName">Last Name</label>
+                                    <input type="text" id="lastName" name="lastName">
+                                </div>
+                                <div class="form-group">
+                                    <label for="email">Email</label>
+                                    <input type="email" id="email" name="email" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label for="username">Username</label>
+                                    <input type="text" id="username" name="username" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label for="phone">Phone Number</label>
+                                    <input type="tel" id="phone" name="phone">
+                                </div>
+                                <div class="form-group">
+                                    <label for="dateOfBirth">Date of Birth</label>
+                                    <input type="date" id="dateOfBirth" name="dateOfBirth">
+                                </div>
+                                <div class="form-group">
+                                    <label for="gender">Gender</label>
+                                    <select id="gender" name="gender">
+                                        <option value="">Select Gender</option>
+                                        <option value="male">Male</option>
+                                        <option value="female">Female</option>
+                                        <option value="other">Other</option>
+                                        <option value="prefer_not_to_say">Prefer not to say</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="theme">Theme</label>
+                                    <select id="theme" name="theme" class="form-select">
+                                        <option value="auto">Auto</option>
+                                        <option value="light">Light</option>
+                                        <option value="dark">Dark</option>
+                                    </select>
+                                </div>
+                                <div class="form-group full-width">
+                                    <label for="bio">Bio</label>
+                                    <textarea id="bio" name="bio" rows="3"></textarea>
+                                </div>
+                                <div class="form-group full-width">
+                                    <label for="website">Website</label>
+                                    <input type="url" id="website" name="website">
+                                </div>
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" id="cancelProfileEdit">Cancel</button>
+                                <button type="submit" class="btn btn-primary">Update Profile</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Location Settings</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="locationForm">
+                            <div class="form-group">
+                                <label for="address">Address</label>
+                                <textarea id="address" name="address" rows="3"
+                                    placeholder="Enter your home address"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="landmark">Landmark (Optional)</label>
+                                <input type="text" id="landmark" name="landmark" placeholder="Nearby landmark">
+                            </div>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="latitude">Latitude</label>
+                                    <input type="number" id="latitude" name="latitude" step="any">
+                                </div>
+                                <div class="form-group">
+                                    <label for="longitude">Longitude</label>
+                                    <input type="number" id="longitude" name="longitude" step="any">
+                                </div>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" id="getCurrentLocation">
+                                    <i class="fas fa-location-arrow"></i>
+                                    Use Current Location
+                                </button>
+                                <button type="submit" class="btn btn-primary">Update Location</button>
+                                <button type="button" class="btn btn-danger" id="removeLocation">Remove
+                                    Location</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Security Section -->
+        <section id="security-section" class="content-section">
+            <div class="security-container">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Password & Security</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="passwordForm">
+                            <div class="form-group">
+                                <label for="currentPassword">Current Password</label>
+                                <input type="password" id="currentPassword" name="currentPassword" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="newPassword">New Password</label>
+                                <input type="password" id="newPassword" name="newPassword" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="confirmPassword">Confirm New Password</label>
+                                <input type="password" id="confirmPassword" name="confirmPassword" required>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">Change Password</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" id="twofaHeader">
+                        <h3>Two-Factor Authentication</h3>
+                    </div>
+                    <div class="card-body" style="padding: 0;">
+                        <div class="twofa-status" id="twofaStatus">
+                            <div class="loading">Loading 2FA status...</div>
+                        </div>
+
+                        <!-- Backup Codes Section -->
+                        <div class="backup-codes-section" id="backupCodesSection" style="display: none;">
+                            <hr>
+                            <div class="backup-codes-header">
+                                <h4>Backup Codes</h4>
+                                <p>Use these codes to access your account if you lose your authenticator device. Keep
+                                    them safe!</p>
+                            </div>
+                            <div class="backup-codes-actions">
+                                <button class="btn btn-secondary" id="viewBackupCodesBtn">
+                                    <i class="fas fa-eye"></i>
+                                    View Backup Codes
+                                </button>
+                                <button class="btn btn-warning" id="regenerateBackupCodesBtn">
+                                    <i class="fas fa-sync-alt"></i>
+                                    Generate New Backup Codes
+                                </button>
+                            </div>
+                            <div class="backup-codes-display" id="backupCodesDisplay" style="display: none;">
+                                <div class="backup-codes-list" id="backupCodesList">
+                                    <!-- Backup codes will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Social Accounts</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="social-accounts" id="socialAccounts">
+                            <div class="loading">Loading social accounts...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Account Deletion Section -->
+                <div class="card danger-zone-card">
+                    <div class="card-header">
+                        <h3>
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Danger Zone
+                        </h3>
+                    </div>
+                    <div class="card-body" style="padding: 0;">
+                        <div class="danger-zone">
+                            <div class="danger-item">
+                                <div class="danger-info">
+                                    <h4>
+                                        <i class="fas fa-trash-alt"></i>
+                                        Delete Account
+                                    </h4>
+                                    <p>Once you delete your account, there is no going back. Please be certain.</p>
+                                </div>
+                                <div class="danger-actions">
+                                    <button class="btn btn-danger" id="deleteAccountBtn">
+                                        Request Account Deletion
+                                    </button>
+                                    <button class="btn btn-outline-danger" id="requestDeleteBtn">
+                                        <i class="fas fa-trash-alt"></i>
+                                        Delete My Account
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Notifications Section -->
+        <section id="notifications-section" class="content-section">
+            <div class="card">
+                <div class="card-header notification-header">
+                    <h3>Notifications</h3>
+                    <div class="notification-actions notification-actions-btns">
+                        <button class="btn btn-sm btn-secondary" id="markAllRead">Mark All Read</button>
+                        <select id="notificationFilter" class="form-select">
+                            <option value="">All Notifications</option>
+                            <option value="security">Security</option>
+                            <option value="account">Account</option>
+                            <option value="system">System</option>
+                            <option value="marketing">Marketing</option>
+                            <option value="feature">Feature</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="notifications-list" id="notificationsList">
+                        <div class="loading">Loading notifications...</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Settings Section -->
+        <section id="settings-section" class="content-section">
+            <div class="settings-container">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>General Settings</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="settingsForm">
+                            <div class="form-group">
+                                <label for="language">Language</label>
+                                <select id="language" name="language" class="form-select">
+                                    <option value="en">English</option>
+                                    <option value="es">Español</option>
+                                    <option value="fr">Français</option>
+                                    <option value="de">Deutsch</option>
+                                    <option value="it">Italiano</option>
+                                    <option value="pt">Português</option>
+                                    <option value="ru">Русский</option>
+                                    <option value="zh">中文</option>
+                                    <option value="ja">日本語</option>
+                                    <option value="ko">한국어</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="timezone">Timezone</label>
+                                <select id="timezone" name="timezone" class="form-select">
+                                    <option value="UTC">UTC</option>
+                                    <option value="America/New_York">Eastern Time</option>
+                                    <option value="America/Chicago">Central Time</option>
+                                    <option value="America/Denver">Mountain Time</option>
+                                    <option value="America/Los_Angeles">Pacific Time</option>
+                                    <option value="Europe/London">London</option>
+                                    <option value="Europe/Berlin">Berlin</option>
+                                    <option value="Asia/Tokyo">Tokyo</option>
+                                    <option value="Asia/Shanghai">Shanghai</option>
+                                    <option value="Asia/Karachi">Karachi</option>
+                                </select>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">Save Settings</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Notification Preferences</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="notification-settings" id="notificationSettings">
+                            <div class="loading">Loading notification settings...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Privacy Settings</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="privacy-settings" id="privacySettings">
+                            <div class="loading">Loading privacy settings...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Devices Section -->
+        <section id="devices-section" class="content-section">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Trusted Devices</h3>
+                </div>
+                <div class="card-body">
+                    <div class="devices-list" id="devicesList">
+                        <div class="loading">Loading devices...</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sessions Section -->
+        <section id="sessions-section" class="content-section">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Active Sessions</h3>
+                    <button class="btn btn-danger btn-sm" id="logoutAllDevices">
+                        <i class="fas fa-sign-out-alt"></i>
+                        Logout All Devices
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="sessions-list" id="sessionsList">
+                        <div class="loading">Loading sessions...</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Analytics Section -->
+        <section id="analytics-section" class="content-section">
+            <div class="analytics-container">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Account Analytics</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="analytics-grid" id="analyticsGrid">
+                            <div class="loading">Loading analytics...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Audit Logs Section -->
+        <section id="audit-logs-section" class="content-section">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Audit Logs</h3>
+                    <div class="audit-filters">
+                        <input type="text" id="auditSearch" placeholder="Search actions..." class="form-input">
+                        <input type="date" id="auditFromDate" class="form-input">
+                        <input type="date" id="auditToDate" class="form-input">
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="audit-logs-list" id="auditLogsList">
+                        <div class="loading">Loading audit logs...</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Admin Panel Section -->
+        <section id="admin-section" class="content-section">
+            <div class="admin-container">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>User Management</h3>
+                        <div class="admin-filters">
+                            <input type="text" id="adminUserSearch" placeholder="Search users..." class="form-input">
+                            <select id="adminRoleFilter" class="form-select">
+                                <option value="">All Roles</option>
+                                <option value="user">User</option>
+                                <option value="moderator">Moderator</option>
+                                <option value="admin">Admin</option>
+                                <option value="superadmin">Super Admin</option>
+                            </select>
+                            <select id="adminStatusFilter" class="form-select">
+                                <option value="">All Status</option>
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                                <option value="deleted">Deleted</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="admin-users-list" id="adminUsersList">
+                            <div class="loading">Loading users...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modals -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Modal Title</h3>
+                <button class="modal-close" id="modalClose">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Modal content will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Account Deletion Modal -->
+    <div id="accountDeletionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Confirm Account Deletion</h3>
+                <button class="modal-close" id="deletionModalClose">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="deletion-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h4>This action cannot be undone!</h4>
+                    <p>This will permanently delete your account and remove all your data from our servers.</p>
+                </div>
+
+                <form id="accountDeletionForm">
+                    <div class="form-group">
+                        <label for="deleteConfirmText">Type "DELETE MY ACCOUNT" to confirm:</label>
+                        <input type="text" id="deleteConfirmText" name="confirmText" autocomplete="off" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="deletePassword">Enter your password to confirm:</label>
+                        <input type="password" id="deletePassword" name="password" required>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" id="cancelDeletionBtn">Cancel</button>
+                        <button type="submit" class="btn btn-danger" disabled id="confirmDeletionBtn">
+                            <i class="fas fa-trash-alt"></i>
+                            Delete My Account
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="toast-container"></div>
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <svg class="pl" viewBox="0 0 160 160" width="160px" height="160px" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#000"></stop>
+                    <stop offset="100%" stop-color="#fff"></stop>
+                </linearGradient>
+                <mask id="mask1">
+                    <rect x="0" y="0" width="160" height="160" fill="url(#grad)"></rect>
+                </mask>
+                <mask id="mask2">
+                    <rect x="28" y="28" width="104" height="104" fill="url(#grad)"></rect>
+                </mask>
+            </defs>
+
+            <g>
+                <g class="pl__ring-rotate">
+                    <circle class="pl__ring-stroke" cx="80" cy="80" r="72" fill="none" stroke="hsl(223,90%,55%)"
+                        stroke-width="16" stroke-dasharray="452.39 452.39" stroke-dashoffset="452"
+                        stroke-linecap="round" transform="rotate(-45,80,80)"></circle>
+                </g>
+            </g>
+            <g mask="url(#mask1)">
+                <g class="pl__ring-rotate">
+                    <circle class="pl__ring-stroke" cx="80" cy="80" r="72" fill="none" stroke="hsl(193,90%,55%)"
+                        stroke-width="16" stroke-dasharray="452.39 452.39" stroke-dashoffset="452"
+                        stroke-linecap="round" transform="rotate(-45,80,80)"></circle>
+                </g>
+            </g>
+
+            <g>
+                <g stroke-width="4" stroke-dasharray="12 12" stroke-dashoffset="12" stroke-linecap="round"
+                    transform="translate(80,80)">
+                    <polyline class="pl__tick" stroke="hsl(223,10%,90%)" points="0,2 0,14"
+                        transform="rotate(-135,0,0) translate(0,40)"></polyline>
+                    <polyline class="pl__tick" stroke="hsl(223,10%,90%)" points="0,2 0,14"
+                        transform="rotate(-90,0,0) translate(0,40)"></polyline>
+                    <polyline class="pl__tick" stroke="hsl(223,10%,90%)" points="0,2 0,14"
+                        transform="rotate(-45,0,0) translate(0,40)"></polyline>
+                    <polyline class="pl__tick" stroke="hsl(223,10%,90%)" points="0,2 0,14"
+                        transform="rotate(0,0,0) translate(0,40)"></polyline>
+                    <polyline class="pl__tick" stroke="hsl(223,10%,90%)" points="0,2 0,14"
+                        transform="rotate(45,0,0) translate(0,40)"></polyline>
+                    <polyline class="pl__tick" stroke="hsl(223,10%,90%)" points="0,2 0,14"
+                        transform="rotate(90,0,0) translate(0,40)"></polyline>
+                    <polyline class="pl__tick" stroke="hsl(223,10%,90%)" points="0,2 0,14"
+                        transform="rotate(135,0,0) translate(0,40)"></polyline>
+                    <polyline class="pl__tick" stroke="hsl(223,10%,90%)" points="0,2 0,14"
+                        transform="rotate(180,0,0) translate(0,40)"></polyline>
+                </g>
+            </g>
+            <g mask="url(#mask1)">
+                <g stroke-width="4" stroke-dasharray="12 12" stroke-dashoffset="12" stroke-linecap="round"
+                    transform="translate(80,80)">
+                    <polyline class="pl__tick" stroke="hsl(223,90%,80%)" points="0,2 0,14"
+                        transform="rotate(-135,0,0) translate(0,40)"></polyline>
+                    <polyline class="pl__tick" stroke="hsl(223,90%,80%)" points="0,2 0,14"
+                        transform="rotate(-90,0,0) translate(0,40)"></polyline>
+                    <polyline class="pl__tick" stroke="hsl(223,90%,80%)" points="0,2 0,14"
+                        transform="rotate(-45,0,0) translate(0,40)"></polyline>
+                    <polyline class="pl__tick" stroke="hsl(223,90%,80%)" points="0,2 0,14"
+                        transform="rotate(0,0,0) translate(0,40)"></polyline>
+                    <polyline class="pl__tick" stroke="hsl(223,90%,80%)" points="0,2 0,14"
+                        transform="rotate(45,0,0) translate(0,40)"></polyline>
+                    <polyline class="pl__tick" stroke="hsl(223,90%,80%)" points="0,2 0,14"
+                        transform="rotate(90,0,0) translate(0,40)"></polyline>
+                    <polyline class="pl__tick" stroke="hsl(223,90%,80%)" points="0,2 0,14"
+                        transform="rotate(135,0,0) translate(0,40)"></polyline>
+                    <polyline class="pl__tick" stroke="hsl(223,90%,80%)" points="0,2 0,14"
+                        transform="rotate(180,0,0) translate(0,40)"></polyline>
+                </g>
+            </g>
+
+            <g>
+                <g transform="translate(64,28)">
+                    <g class="pl__arrows" transform="rotate(45,16,52)">
+                        <path fill="hsl(3,90%,55%)"
+                            d="M17.998,1.506l13.892,43.594c.455,1.426-.56,2.899-1.998,2.899H2.108c-1.437,0-2.452-1.473-1.998-2.899L14.002,1.506c.64-2.008,3.356-2.008,3.996,0Z">
+                        </path>
+                        <path fill="hsl(223,10%,90%)"
+                            d="M14.009,102.499L.109,58.889c-.453-1.421,.559-2.889,1.991-2.889H29.899c1.433,0,2.444,1.468,1.991,2.889l-13.899,43.61c-.638,2.001-3.345,2.001-3.983,0Z">
+                        </path>
+                    </g>
+                </g>
+            </g>
+            <g mask="url(#mask2)">
+                <g transform="translate(64,28)">
+                    <g class="pl__arrows" transform="rotate(45,16,52)">
+                        <path fill="hsl(333,90%,55%)"
+                            d="M17.998,1.506l13.892,43.594c.455,1.426-.56,2.899-1.998,2.899H2.108c-1.437,0-2.452-1.473-1.998-2.899L14.002,1.506c.64-2.008,3.356-2.008,3.996,0Z">
+                        </path>
+                        <path fill="hsl(223,90%,80%)"
+                            d="M14.009,102.499L.109,58.889c-.453-1.421,.559-2.889,1.991-2.889H29.899c1.433,0,2.444,1.468,1.991,2.889l-13.899,43.61c-.638,2.001-3.345,2.001-3.983,0Z">
+                        </path>
+                    </g>
+                </g>
+            </g>
+        </svg>
+    </div>
+    <div class="loaderpic" id="loaderpic">
+        <div>
+            <div class="loader"></div>
+        </div>
+    </div>
+    <script src="js/dash.js"></script>
+
+</body>
+
+</html>
