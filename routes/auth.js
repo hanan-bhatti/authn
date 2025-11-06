@@ -374,7 +374,7 @@ const sendDeviceVerificationEmail = async (user, deviceInfo, req) => {
     await user.save();
 
     // Create verification URL
-    const verificationUrl = `${process.env.FRONTEND_URL}/auth/verify-device?token=${verificationToken}`;
+    const verificationUrl = `${process.env.NODE_ENV === 'production' ? process.env.PROD_FRONTEND_URL : process.env.FRONTEND_URL}/auth/verify-device?token=${verificationToken}`;
 
     await sendEmail({
       to: user.email,
@@ -788,11 +788,11 @@ router.post('/google',
 
       // Set secure HTTP-only cookie
       res.cookie('token', token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-        maxAge: expiresIn,
-        path: '/'
+        httpOnly: process.env.COOKIE_HTTP_ONLY === 'true',
+        secure: process.env.COOKIE_SECURE === 'true',
+        sameSite: process.env.COOKIE_SAME_SITE || (process.env.NODE_ENV === 'production' ? 'strict' : 'lax'),
+        maxAge: parseInt(process.env.COOKIE_MAX_AGE) || expiresIn,
+        path: process.env.COOKIE_PATH || '/'
       });
 
       user.addAuditLog('LOGIN_SUCCESS', {
@@ -879,7 +879,7 @@ router.post('/google',
         data: {
           name: user.fullName || user.username,
           email: user.email,
-          dashboardUrl: process.env.FRONTEND_URL + '/dashboard',
+          dashboardUrl: process.env.NODE_ENV === 'production' ? process.env.PROD_DASHBOARD_URL : process.env.DASHBOARD_URL,
           loginMethod: 'Google'
         }
       });
@@ -1123,7 +1123,7 @@ router.post('/login',
     }
 
     // Successful authentication - create session and login
-    const sessionDuration = rememberMe ? 30 * 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
+    const sessionDuration = rememberMe ? parseInt(process.env.COOKIE_MAX_AGE_REMEMBER_ME || '2592000000') : parseInt(process.env.COOKIE_MAX_AGE_DEFAULT || '604800000');
 
     try {
       // Update user login information
@@ -1163,11 +1163,11 @@ router.post('/login',
 
       // Set secure HTTP-only cookie
       res.cookie('token', token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-        maxAge: sessionDuration,
-        path: '/'
+        httpOnly: process.env.COOKIE_HTTP_ONLY === 'true',
+        secure: process.env.COOKIE_SECURE === 'true',
+        sameSite: process.env.COOKIE_SAME_SITE || (process.env.NODE_ENV === 'production' ? 'strict' : 'lax'),
+        maxAge: parseInt(process.env.COOKIE_MAX_AGE) || sessionDuration,
+        path: process.env.COOKIE_PATH || '/'
       });
 
       // Audit log for successful login
@@ -1361,11 +1361,11 @@ router.post('/verify-device',
 
     // Set secure HTTP-only cookie
     res.cookie('token', jwtToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-      maxAge: sessionDuration,
-      path: '/'
+      httpOnly: process.env.COOKIE_HTTP_ONLY === 'true',
+      secure: process.env.COOKIE_SECURE === 'true',
+      sameSite: process.env.COOKIE_SAME_SITE || (process.env.NODE_ENV === 'production' ? 'strict' : 'lax'),
+      maxAge: parseInt(process.env.COOKIE_MAX_AGE) || sessionDuration,
+      path: process.env.COOKIE_PATH || '/'
     });
 
     return res.json(new ApiResponse({
@@ -1550,11 +1550,11 @@ router.post('/verify-2fa',
 
       // Set secure HTTP-only cookie
       res.cookie('token', token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-        maxAge: sessionDuration,
-        path: '/'
+        httpOnly: process.env.COOKIE_HTTP_ONLY === 'true',
+        secure: process.env.COOKIE_SECURE === 'true',
+        sameSite: process.env.COOKIE_SAME_SITE || (process.env.NODE_ENV === 'production' ? 'strict' : 'lax'),
+        maxAge: parseInt(process.env.COOKIE_MAX_AGE) || sessionDuration,
+        path: process.env.COOKIE_PATH || '/'
       });
 
       user.addAuditLog('LOGIN_SUCCESS_2FA', {
@@ -1709,11 +1709,11 @@ router.post('/verify-email',
       );
 
       res.cookie('token', token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-        maxAge: sessionDuration,
-        path: '/'
+        httpOnly: process.env.COOKIE_HTTP_ONLY === 'true',
+        secure: process.env.COOKIE_SECURE === 'true',
+        sameSite: process.env.COOKIE_SAME_SITE || (process.env.NODE_ENV === 'production' ? 'strict' : 'lax'),
+        maxAge: parseInt(process.env.COOKIE_MAX_AGE) || sessionDuration,
+        path: process.env.COOKIE_PATH || '/'
       });
 
       return res.json(new ApiResponse({

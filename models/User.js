@@ -671,7 +671,7 @@ userSchema.pre('save', async function (next) {
     }
 
     console.log('Hashing new password...');
-    const salt = await bcrypt.genSalt(12);
+    const salt = await bcrypt.genSalt(parseInt(process.env.BCRYPT_ROUNDS) || 12);
     this.passwordHash = await bcrypt.hash(this.passwordHash, salt);
     console.log('Password hashed successfully');
   }

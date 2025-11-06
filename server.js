@@ -317,15 +317,9 @@ const corsOptions = {
       return callback(null, true);
     }
     
-    const allowedOrigins = [
-      process.env.FRONTEND_URL,
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://127.0.0.1:3000',
-      'http://127.0.0.1:3001',
-      `http://localhost:${process.env.PORT || 5000}`,
-      `http://127.0.0.1:${process.env.PORT || 5000}`
-    ].filter(Boolean);
+    const allowedOrigins = process.env.NODE_ENV === 'production'
+      ? (process.env.CORS_ALLOWED_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean).concat([process.env.PROD_FRONTEND_URL])
+      : (process.env.CORS_ALLOWED_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean).concat([process.env.FRONTEND_URL]);
         
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
@@ -957,13 +951,16 @@ const startServer = async () => {
     
     // Start HTTP server
     server = app.listen(PORT, () => {
+      const baseUrl = process.env.NODE_ENV === 'production' ? process.env.PROD_BASE_URL : process.env.BASE_URL;
+      const frontendUrl = process.env.NODE_ENV === 'production' ? process.env.PROD_FRONTEND_URL : process.env.FRONTEND_URL;
+
       console.log(`\n🚀 Server running on port ${PORT}`);
       console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`🔗 Health check: http://localhost:${PORT}/health`);
-      console.log(`🌐 API Base URL: http://localhost:${PORT}/api`);
+      console.log(`🔗 Health check: ${baseUrl}/health`);
+      console.log(`🌐 API Base URL: ${baseUrl}/api`);
       
-      if (process.env.FRONTEND_URL) {
-        console.log(`🎨 Frontend URL: ${process.env.FRONTEND_URL}`);
+      if (frontendUrl) {
+        console.log(`🎨 Frontend URL: ${frontendUrl}`);
       }
       
       console.log('\n✅ Server started successfully!\n');
