@@ -279,24 +279,24 @@ curl -X POST http://localhost:5000/api/auth/login \
 ```
 ┌─────────────────────────────────────────┐
 │         Client Applications             │
-│   (Web, Mobile, Third-party Apps)      │
+│   (Web, Mobile, Third-party Apps)       │
 └──────────────┬──────────────────────────┘
                │ HTTPS/REST API
                │
 ┌──────────────▼──────────────────────────┐
 │         Express.js Server               │
-│  ┌────────────────────────────────┐    │
-│  │  Middleware Layer              │    │
-│  │  • CORS  • Helmet              │    │
-│  │  • Rate Limiting  • Auth       │    │
-│  └────────────────────────────────┘    │
-│  ┌────────────────────────────────┐    │
-│  │  Route Handlers                │    │
-│  │  /auth  /users  /permissions   │    │
-│  └────────────────────────────────┘    │
+│  ┌────────────────────────────────┐     │
+│  │  Middleware Layer              │     │
+│  │  • CORS  • Helmet              │     │
+│  │  • Rate Limiting  • Auth       │     │
+│  └────────────────────────────────┘     │
+│  ┌────────────────────────────────┐     │
+│  │  Route Handlers                │     │
+│  │  /auth  /users  /permissions   │     │
+│  └────────────────────────────────┘     │
 └──────────┬────────────┬─────────────────┘
            │            │
-    ┌──────▼──────┐  ┌─▼─────────────┐
+    ┌──────▼──────┐  ┌──▼────────────┐
     │  MongoDB    │  │ External      │
     │  Database   │  │ Services      │
     │             │  │ • Email       │

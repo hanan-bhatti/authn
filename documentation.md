@@ -1,4 +1,4 @@
-# Authn - Complete Documentation
+# Authn - Documentation
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/hanan-bhatti/authn/main/public/favicon.ico" alt="Authn Logo" width="120">
@@ -126,42 +126,42 @@ http://localhost:5000
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        Client Layer                          │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
-│  │  Browser │  │  Mobile  │  │  API     │  │  CLI     │   │
-│  │  App     │  │  App     │  │  Client  │  │  Tool    │   │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘   │
+│                        Client Layer                         │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐     │
+│  │  Browser │  │  Mobile  │  │  API     │  │  CLI     │     │
+│  │  App     │  │  App     │  │  Client  │  │  Tool    │     │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘     │
 └─────────────────────────────────────────────────────────────┘
                              ↓
 ┌─────────────────────────────────────────────────────────────┐
-│                    API Gateway Layer                         │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │  Rate Limiting  │  CORS  │  Helmet  │  Compression  │  │
-│  └──────────────────────────────────────────────────────┘  │
+│                    API Gateway Layer                        │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │  Rate Limiting  │  CORS  │  Helmet  │  Compression   │   │
+│  └──────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────┘
                              ↓
 ┌─────────────────────────────────────────────────────────────┐
-│                   Authentication Layer                       │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐           │
-│  │ JWT Auth   │  │ 2FA Auth   │  │ Device     │           │
-│  │            │  │            │  │ Fingerprint│           │
-│  └────────────┘  └────────────┘  └────────────┘           │
+│                   Authentication Layer                      │
+│  ┌────────────┐  ┌────────────┐  ┌────────────┐             │
+│  │ JWT Auth   │  │ 2FA Auth   │  │ Device     │             │
+│  │            │  │            │  │ Fingerprint│             │
+│  └────────────┘  └────────────┘  └────────────┘             │
 └─────────────────────────────────────────────────────────────┘
                              ↓
 ┌─────────────────────────────────────────────────────────────┐
-│                   Business Logic Layer                       │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐           │
-│  │ User       │  │ Session    │  │ Permission │           │
-│  │ Service    │  │ Service    │  │ Service    │           │
-│  └────────────┘  └────────────┘  └────────────┘           │
+│                   Business Logic Layer                      │
+│  ┌────────────┐  ┌────────────┐  ┌────────────┐             │
+│  │ User       │  │ Session    │  │ Permission │             │
+│  │ Service    │  │ Service    │  │ Service    │             │
+│  └────────────┘  └────────────┘  └────────────┘             │
 └─────────────────────────────────────────────────────────────┘
                              ↓
 ┌─────────────────────────────────────────────────────────────┐
-│                      Data Layer                              │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐           │
-│  │ MongoDB    │  │ Redis      │  │ S3/Filebase│           │
-│  │ (Primary)  │  │ (Cache)    │  │ (Storage)  │           │
-│  └────────────┘  └────────────┘  └────────────┘           │
+│                      Data Layer                             │
+│  ┌────────────┐  ┌────────────┐  ┌────────────┐             │
+│  │ MongoDB    │  │ Redis      │  │ S3/Filebase│             │
+│  │ (Primary)  │  │ (Cache)    │  │ (Storage)  │             │
+│  └────────────┘  └────────────┘  └────────────┘             │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -2453,3 +2453,866 @@ app.get('/health', async (req, res) => {
   } catch (error) {
     health.services.database = 'disconnected';
     health.status = 'degraded';
+  }
+
+  // Check email service
+  health.services.email = emailService.isReady ? 'ready' : 'not configured';
+
+  // Check storage service
+  health.services.storage = storageService.isEnabled ? 'enabled' : 'disabled';
+
+  const httpStatus = health.status === 'ok' ? 200 : 503;
+  res.status(httpStatus).json(health);
+});
+```
+
+### 2. Application Monitoring
+
+#### Using PM2 Monitor
+
+```bash
+# Install PM2 Plus for advanced monitoring
+pm2 install pm2-logrotate
+pm2 set pm2-logrotate:max_size 10M
+pm2 set pm2-logrotate:retain 7
+
+# Monitor metrics
+pm2 monitor
+
+# Custom metrics
+pm2 install pm2-server-monit
+```
+
+#### Custom Metrics Collection
+
+```javascript
+// utils/metrics.js
+class MetricsCollector {
+  constructor() {
+    this.metrics = {
+      requests: { total: 0, failed: 0, success: 0 },
+      auth: { logins: 0, registrations: 0, failures: 0 },
+      performance: { avgResponseTime: 0 }
+    };
+  }
+
+  incrementCounter(metric, subMetric) {
+    if (this.metrics[metric] && this.metrics[metric][subMetric] !== undefined) {
+      this.metrics[metric][subMetric]++;
+    }
+  }
+
+  recordResponseTime(time) {
+    const current = this.metrics.performance.avgResponseTime;
+    this.metrics.performance.avgResponseTime = (current + time) / 2;
+  }
+
+  getMetrics() {
+    return this.metrics;
+  }
+
+  reset() {
+    Object.keys(this.metrics).forEach(key => {
+      if (typeof this.metrics[key] === 'object') {
+        Object.keys(this.metrics[key]).forEach(subKey => {
+          this.metrics[key][subKey] = 0;
+        });
+      }
+    });
+  }
+}
+
+module.exports = new MetricsCollector();
+```
+
+### 3. Error Tracking
+
+#### Sentry Integration
+
+```javascript
+// Install Sentry
+npm install @sentry/node
+
+// Initialize in server.js
+const Sentry = require('@sentry/node');
+
+if (process.env.NODE_ENV === 'production') {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV,
+    tracesSampleRate: 1.0,
+    beforeSend(event, hint) {
+      // Filter sensitive data
+      if (event.request) {
+        delete event.request.cookies;
+        delete event.request.headers['authorization'];
+      }
+      return event;
+    }
+  });
+
+  app.use(Sentry.Handlers.requestHandler());
+  app.use(Sentry.Handlers.errorHandler());
+}
+```
+
+### 4. Logging Strategy
+
+#### Winston Logger Setup
+
+```javascript
+// utils/logger.js
+const winston = require('winston');
+const path = require('path');
+
+const logger = winston.createLogger({
+  level: process.env.LOG_LEVEL || 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.errors({ stack: true }),
+    winston.format.json()
+  ),
+  defaultMeta: { service: 'authn' },
+  transports: [
+    // Write all logs to console
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.colorize(),
+        winston.format.simple()
+      )
+    }),
+    // Write all logs with level 'error' to error.log
+    new winston.transports.File({
+      filename: path.join(__dirname, '../logs/error.log'),
+      level: 'error',
+      maxsize: 5242880, // 5MB
+      maxFiles: 5
+    }),
+    // Write all logs to combined.log
+    new winston.transports.File({
+      filename: path.join(__dirname, '../logs/combined.log'),
+      maxsize: 5242880,
+      maxFiles: 5
+    })
+  ]
+});
+
+// Create a stream for Morgan
+logger.stream = {
+  write: (message) => logger.info(message.trim())
+};
+
+module.exports = logger;
+```
+
+#### Usage
+
+```javascript
+const logger = require('./utils/logger');
+
+logger.info('User logged in', { userId: user._id, ip: req.ip });
+logger.error('Database connection failed', { error: err.message });
+logger.warn('Rate limit exceeded', { ip: req.ip });
+```
+
+### 5. Database Monitoring
+
+#### MongoDB Monitoring Queries
+
+```javascript
+// Check database size
+db.stats()
+
+// Check collection sizes
+db.users.stats()
+
+// Monitor slow queries
+db.setProfilingLevel(1, { slowms: 100 })
+db.system.profile.find().limit(5).sort({ ts: -1 }).pretty()
+
+// Check index usage
+db.users.aggregate([{ $indexStats: {} }])
+
+// Monitor connections
+db.serverStatus().connections
+
+// Check replication lag (if using replica sets)
+rs.printSlaveReplicationInfo()
+```
+
+#### Automated Monitoring Script
+
+```javascript
+// scripts/monitor-db.js
+const mongoose = require('mongoose');
+const logger = require('../utils/logger');
+
+async function checkDatabaseHealth() {
+  try {
+    const stats = await mongoose.connection.db.stats();
+    
+    const healthCheck = {
+      dataSize: (stats.dataSize / 1024 / 1024).toFixed(2) + ' MB',
+      indexSize: (stats.indexSize / 1024 / 1024).toFixed(2) + ' MB',
+      collections: stats.collections,
+      objects: stats.objects,
+      avgObjSize: (stats.avgObjSize / 1024).toFixed(2) + ' KB'
+    };
+
+    logger.info('Database health check', healthCheck);
+
+    // Alert if database size exceeds threshold
+    if (stats.dataSize > 10 * 1024 * 1024 * 1024) { // 10GB
+      logger.warn('Database size exceeds 10GB', healthCheck);
+    }
+
+    return healthCheck;
+  } catch (error) {
+    logger.error('Database health check failed', { error: error.message });
+    throw error;
+  }
+}
+
+module.exports = { checkDatabaseHealth };
+```
+
+### 6. Performance Optimization
+
+#### Caching Strategy
+
+```javascript
+// utils/cache.js
+const NodeCache = require('node-cache');
+
+class CacheService {
+  constructor(ttlSeconds = 300) {
+    this.cache = new NodeCache({ 
+      stdTTL: ttlSeconds, 
+      checkperiod: ttlSeconds * 0.2 
+    });
+  }
+
+  get(key) {
+    return this.cache.get(key);
+  }
+
+  set(key, value, ttl) {
+    return this.cache.set(key, value, ttl);
+  }
+
+  del(key) {
+    return this.cache.del(key);
+  }
+
+  flush() {
+    return this.cache.flushAll();
+  }
+
+  getStats() {
+    return this.cache.getStats();
+  }
+}
+
+// Usage example
+const cache = new CacheService(600); // 10 minutes TTL
+
+// Cache user profile
+app.get('/api/users/profile', async (req, res) => {
+  const cacheKey = `user:${req.user.userId}`;
+  const cached = cache.get(cacheKey);
+  
+  if (cached) {
+    return res.json({ success: true, data: cached, fromCache: true });
+  }
+
+  const user = await User.findById(req.user.userId);
+  cache.set(cacheKey, sanitizeUser(user), 300); // Cache for 5 minutes
+  
+  res.json({ success: true, data: sanitizeUser(user) });
+});
+```
+
+### 7. Automated Maintenance Tasks
+
+#### Cleanup Script
+
+```javascript
+// scripts/cleanup.js
+const cron = require('node-cron');
+const User = require('../models/User');
+const UserBackup = require('../models/User').UserBackup;
+const logger = require('../utils/logger');
+
+// Run daily at 2 AM
+cron.schedule('0 2 * * *', async () => {
+  logger.info('Starting daily cleanup tasks');
+
+  try {
+    // Clean expired sessions
+    const sessionResult = await User.updateMany(
+      { 'sessions.expiresAt': { $lt: new Date() } },
+      { $pull: { sessions: { expiresAt: { $lt: new Date() } } } }
+    );
+    logger.info(`Cleaned ${sessionResult.modifiedCount} expired sessions`);
+
+    // Clean expired device verifications
+    const deviceResult = await User.updateMany(
+      { 'pendingDeviceVerifications.expiresAt': { $lt: new Date() } },
+      { $pull: { pendingDeviceVerifications: { expiresAt: { $lt: new Date() } } } }
+    );
+    logger.info(`Cleaned ${deviceResult.modifiedCount} expired device verifications`);
+
+    // Clean expired backups
+    const backupResult = await UserBackup.deleteMany({
+      retainUntil: { $lt: new Date() }
+    });
+    logger.info(`Deleted ${backupResult.deletedCount} expired backups`);
+
+    // Clean old audit logs (keep last 90 days)
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+    
+    await User.updateMany(
+      {},
+      { $pull: { auditLogs: { timestamp: { $lt: ninetyDaysAgo } } } }
+    );
+    logger.info('Cleaned old audit logs');
+
+    logger.info('Daily cleanup completed successfully');
+  } catch (error) {
+    logger.error('Daily cleanup failed', { error: error.message });
+  }
+});
+
+// Clean inactive sessions every hour
+cron.schedule('0 * * * *', async () => {
+  try {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    await User.updateMany(
+      { 'sessions.lastActivity': { $lt: thirtyDaysAgo } },
+      { $pull: { sessions: { lastActivity: { $lt: thirtyDaysAgo } } } }
+    );
+
+    logger.info('Cleaned inactive sessions');
+  } catch (error) {
+    logger.error('Session cleanup failed', { error: error.message });
+  }
+});
+```
+
+### 8. Alerts & Notifications
+
+#### Alert Configuration
+
+```javascript
+// utils/alerts.js
+const nodemailer = require('nodemailer');
+const logger = require('./logger');
+
+class AlertService {
+  constructor() {
+    this.adminEmail = process.env.ADMIN_EMAIL;
+    this.thresholds = {
+      errorRate: 0.05, // 5% error rate
+      responseTime: 2000, // 2 seconds
+      diskUsage: 0.85, // 85% disk usage
+      memoryUsage: 0.90 // 90% memory usage
+    };
+  }
+
+  async sendAlert(type, message, data) {
+    logger.error(`ALERT [${type}]: ${message}`, data);
+
+    if (process.env.NODE_ENV === 'production' && this.adminEmail) {
+      try {
+        const transporter = nodemailer.createTransporter({
+          host: process.env.SMTP_HOST,
+          port: process.env.SMTP_PORT,
+          auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS
+          }
+        });
+
+        await transporter.sendMail({
+          from: process.env.EMAIL_FROM,
+          to: this.adminEmail,
+          subject: `🚨 Authn Alert: ${type}`,
+          html: `
+            <h2>Alert Notification</h2>
+            <p><strong>Type:</strong> ${type}</p>
+            <p><strong>Message:</strong> ${message}</p>
+            <pre>${JSON.stringify(data, null, 2)}</pre>
+            <p><em>Timestamp: ${new Date().toISOString()}</em></p>
+          `
+        });
+      } catch (error) {
+        logger.error('Failed to send alert email', { error: error.message });
+      }
+    }
+  }
+
+  checkErrorRate(metrics) {
+    const errorRate = metrics.requests.failed / metrics.requests.total;
+    if (errorRate > this.thresholds.errorRate) {
+      this.sendAlert(
+        'HIGH_ERROR_RATE',
+        `Error rate is ${(errorRate * 100).toFixed(2)}%`,
+        metrics
+      );
+    }
+  }
+
+  checkResponseTime(avgTime) {
+    if (avgTime > this.thresholds.responseTime) {
+      this.sendAlert(
+        'SLOW_RESPONSE_TIME',
+        `Average response time is ${avgTime}ms`,
+        { avgResponseTime: avgTime }
+      );
+    }
+  }
+
+  checkSystemResources() {
+    const memUsage = process.memoryUsage();
+    const memPercent = memUsage.heapUsed / memUsage.heapTotal;
+
+    if (memPercent > this.thresholds.memoryUsage) {
+      this.sendAlert(
+        'HIGH_MEMORY_USAGE',
+        `Memory usage is ${(memPercent * 100).toFixed(2)}%`,
+        memUsage
+      );
+    }
+  }
+}
+
+module.exports = new AlertService();
+```
+
+---
+
+## Troubleshooting
+
+### Common Issues
+
+#### 1. Connection Issues
+
+**Problem:** Cannot connect to MongoDB
+
+```
+MongooseServerSelectionError: connect ECONNREFUSED 127.0.0.1:27017
+```
+
+**Solutions:**
+```bash
+# Check if MongoDB is running
+sudo systemctl status mongod
+
+# Start MongoDB
+sudo systemctl start mongod
+
+# Check MongoDB logs
+sudo tail -f /var/log/mongodb/mongod.log
+
+# Verify connection string in .env
+MONGO_URL=mongodb://localhost:27017/authn
+```
+
+#### 2. Authentication Errors
+
+**Problem:** JWT token verification fails
+
+```
+JsonWebTokenError: invalid signature
+```
+
+**Solutions:**
+```bash
+# Verify JWT_SECRET is set
+echo $JWT_SECRET
+
+# Generate new secret
+node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+
+# Clear old tokens
+# Users need to log in again after changing JWT_SECRET
+```
+
+#### 3. Email Delivery Issues
+
+**Problem:** Email verification/reset emails not sending
+
+**Solutions:**
+```javascript
+// Test email configuration
+const nodemailer = require('nodemailer');
+
+const transporter = nodemailer.createTransporter({
+  host: process.env.SMTP_HOST,
+  port: process.env.SMTP_PORT,
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS
+  }
+});
+
+transporter.verify((error, success) => {
+  if (error) {
+    console.log('Email configuration error:', error);
+  } else {
+    console.log('Email server is ready');
+  }
+});
+```
+
+**Common fixes:**
+- Enable "Less secure app access" for Gmail (or use App Passwords)
+- Check firewall blocking port 587/465
+- Verify SMTP credentials
+- Check spam folder
+
+#### 4. File Upload Issues
+
+**Problem:** File uploads failing
+
+```
+Error: File upload failed: Missing required environment variables
+```
+
+**Solutions:**
+```bash
+# Verify Filebase credentials
+echo $FILEBASE_ACCESS_KEY_ID
+echo $FILEBASE_SECRET_ACCESS_KEY
+echo $FILEBASE_BUCKET_NAME
+
+# Check file permissions
+chmod -R 755 uploads/
+
+# Verify file size limits
+# Default is 10MB, adjust in server.js if needed
+```
+
+#### 5. Rate Limiting Issues
+
+**Problem:** Legitimate users being rate limited
+
+**Solutions:**
+```javascript
+// Adjust rate limits in .env
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=1000
+
+// Whitelist specific IPs (server.js)
+const ipWhitelist = ['192.168.1.1', '10.0.0.1'];
+
+app.use((req, res, next) => {
+  if (ipWhitelist.includes(req.ip)) {
+    return next();
+  }
+  rateLimiter(req, res, next);
+});
+```
+
+#### 6. Session Issues
+
+**Problem:** Users getting logged out randomly
+
+**Solutions:**
+```javascript
+// Increase session duration
+JWT_EXPIRES_IN=30d
+
+// Check for session cleanup issues
+// Disable aggressive session cleanup
+// Review session expiration logic in User model
+```
+
+#### 7. 2FA Issues
+
+**Problem:** 2FA codes not working
+
+**Solutions:**
+```javascript
+// Verify system time is synchronized
+// TOTP requires accurate system time
+
+// Check time sync
+timedatectl status
+
+// Sync time
+sudo ntpdate -s time.nist.gov
+
+// Increase time window tolerance
+// In User.js, modify verify2FACode window parameter
+speakeasy.totp.verify({
+  secret: this.twoFactorAuth.secret,
+  encoding: 'base32',
+  token: code,
+  window: 2 // Increase this if needed
+});
+```
+
+### Debugging Tools
+
+#### Enable Debug Logging
+
+```javascript
+// Add to .env
+LOG_LEVEL=debug
+DEBUG=authn:*
+
+// Use debug module
+const debug = require('debug')('authn:auth');
+
+debug('User login attempt', { email: user.email });
+```
+
+#### Database Query Profiling
+
+```javascript
+// Enable Mongoose debugging
+mongoose.set('debug', true);
+
+// Log slow queries
+mongoose.set('debug', (collectionName, method, query, doc) => {
+  console.log(`${collectionName}.${method}`, JSON.stringify(query), doc);
+});
+```
+
+#### Request/Response Logging
+
+```javascript
+// Add request logging middleware
+app.use((req, res, next) => {
+  const start = Date.now();
+  
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    logger.info('Request processed', {
+      method: req.method,
+      url: req.url,
+      status: res.statusCode,
+      duration: `${duration}ms`,
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+  });
+  
+  next();
+});
+```
+
+---
+
+## Contributing
+
+We welcome contributions from the community! Here's how you can help:
+
+### How to Contribute
+
+1. **Fork the Repository**
+   ```bash
+   git clone https://github.com/hanan-bhatti/authn.git
+   cd authn
+   git remote add upstream https://github.com/hanan-bhatti/authn.git
+   ```
+
+2. **Create a Branch**
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+
+3. **Make Your Changes**
+   - Write clean, documented code
+   - Follow existing code style
+   - Add tests for new features
+   - Update documentation
+
+4. **Commit Your Changes**
+   ```bash
+   git add .
+   git commit -m "feat: add amazing feature"
+   ```
+
+5. **Push to Your Fork**
+   ```bash
+   git push origin feature/your-feature-name
+   ```
+
+6. **Create a Pull Request**
+   - Go to GitHub and create a PR
+   - Provide a clear description
+   - Link related issues
+
+### Commit Message Convention
+
+We follow the [Conventional Commits](https://www.conventionalcommits.org/) specification:
+
+```
+feat: add new feature
+fix: resolve bug
+docs: update documentation
+style: format code
+refactor: restructure code
+test: add tests
+chore: update dependencies
+```
+
+### Code Style Guidelines
+
+- Use ESLint configuration provided
+- Follow JavaScript Standard Style
+- Write meaningful variable names
+- Add JSDoc comments for functions
+- Keep functions small and focused
+- Use async/await over callbacks
+
+### Testing
+
+```bash
+# Run tests
+npm test
+
+# Run tests with coverage
+npm run test:coverage
+
+# Run linter
+npm run lint
+```
+
+### Pull Request Checklist
+
+- [ ] Code follows project style guidelines
+- [ ] Tests added/updated and passing
+- [ ] Documentation updated
+- [ ] Commit messages follow convention
+- [ ] No breaking changes (or documented)
+- [ ] All checks passing
+
+---
+
+## API Rate Limits
+
+### Default Limits
+
+| Endpoint | Window | Max Requests | Scope |
+|----------|--------|--------------|-------|
+| `/api/auth/register` | 15 min | 5 | Per IP |
+| `/api/auth/login` | 15 min | 5 | Per IP |
+| `/api/auth/forgot-password` | 1 hour | 3 | Per Email |
+| `/api/auth/verify-email` | 1 hour | 10 | Per Email |
+| `/api/users/*` | 15 min | 100 | Per Token |
+| All other endpoints | 15 min | 1000 | Per IP |
+
+### Custom Rate Limits
+
+To implement custom rate limits:
+
+```javascript
+const rateLimit = require('express-rate-limit');
+
+const customLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100,
+  message: 'Too many requests from this IP',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use('/api/custom-endpoint', customLimiter);
+```
+
+---
+
+## Support
+
+### Getting Help
+
+- 📧 **Email:** hannanbhatti2006@gmail.com
+- 🐛 **Issues:** [GitHub Issues](https://github.com/hanan-bhatti/authn/issues)
+- 💬 **Discussions:** [GitHub Discussions](https://github.com/hanan-bhatti/authn/discussions)
+- 📚 **Documentation:** [Full Docs](https://github.com/hanan-bhatti/authn/wiki)
+
+### Reporting Security Issues
+
+**Please do not report security vulnerabilities through public GitHub issues.**
+
+Instead, email security concerns to: hannanbhatti2006@gmail.com
+
+Include:
+- Description of the vulnerability
+- Steps to reproduce
+- Potential impact
+- Suggested fix (if any)
+
+We will respond within 48 hours and work with you to resolve the issue.
+
+---
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+```
+MIT License
+
+Copyright (c) 2025 Abdul Hannan Bhatti
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+---
+
+## Acknowledgments
+
+Special thanks to:
+
+- The Node.js community
+- MongoDB team
+- Firebase team
+- All open-source contributors
+- Everyone who has provided feedback and suggestions
+
+---
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for a detailed history of changes.
+
+---
+
+## Roadmap
+
+See [FEATURES.md](FEATURES.md) for upcoming features and long-term plans.
+
+---
+
+**Built with ❤️ by [Abdul Hannan Bhatti](https://github.com/hanan-bhatti)**
+
+**Repository:** https://github.com/hanan-bhatti/authn
+
+**Last Updated:** January 15, 2025
+
+---
+
+*This documentation is continuously updated. For the latest version, please visit the GitHub repository.*
