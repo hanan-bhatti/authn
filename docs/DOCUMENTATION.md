@@ -1,7 +1,7 @@
 # Authn - Documentation
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/hanan-bhatti/authn/main/public/favicon.ico" alt="Authn Logo" width="120">
+  <img src="https://spotless-orange-flea.myfilebase.com/ipfs/QmTxYFh6onsouXAS3Jw3kBMJkvbdAuf9LYQ7FnTT5f6mnZ" alt="Authn Logo" width="120">
 </p>
 
 <p align="center">
