@@ -141,3 +141,6 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+.gemini/
+gha-creds-*.json
+full_security_api_audit.md

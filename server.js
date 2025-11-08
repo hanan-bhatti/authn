@@ -28,7 +28,6 @@ const {
 // Import routes
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/user');
-const permissionRoutes = require('./routes/permissionManager');
 
 // Import middleware
 const { ApiResponse, ApiError } = require('./utils/helpers');
@@ -546,7 +545,6 @@ app.post('/api/backup/create/:userId', async (req, res) => {
   }
 });
 
-app.use('/api/permissions', permissionRoutes);
 
 app.get('/api/theme', async (req, res) => {
     try {
