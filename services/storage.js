@@ -1,4 +1,4 @@
-const { S3Client, PutObjectCommand, DeleteObjectCommand, HeadObjectCommand, CopyObjectCommand, ListObjectsV2Command } = require('@aws-sdk/client-s3');
+const { S3Client, PutObjectCommand, DeleteObjectCommand, HeadObjectCommand, CopyObjectCommand, ListObjectsV2Command, GetObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const { Upload } = require('@aws-sdk/lib-storage');
 const { v4: uuidv4 } = require('uuid');
@@ -6,36 +6,46 @@ const sharp = require('sharp');
 const path = require('path');
 const fs = require('fs').promises;
 
-// Configure Filebase (S3-compatible) with AWS SDK v3
-const filebaseConfig = {
-  endpoint: process.env.FILEBASE_ENDPOINT || 'https://s3.filebase.com',
-  region: process.env.FILEBASE_REGION || 'us-east-1',
+// Configure AWS S3 with SDK v3
+const s3Config = {
+  endpoint: process.env.AWS_S3_ENDPOINT,
+  region: process.env.AWS_S3_REGION || 'us-east-1',
   credentials: {
-    accessKeyId: process.env.FILEBASE_ACCESS_KEY_ID,
-    secretAccessKey: process.env.FILEBASE_SECRET_ACCESS_KEY,
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   },
-  forcePathStyle: true, // Important for Filebase compatibility
+  forcePathStyle: process.env.AWS_S3_FORCE_PATH_STYLE === 'true',
 };
 
-const filebase = new S3Client(filebaseConfig);
+const s3Client = new S3Client(s3Config);
 
-// Support both FILEBASE_BUCKET_NAME and FILEBASE_BUCKET for flexibility
-const BUCKET_NAME = process.env.FILEBASE_BUCKET_NAME || process.env.FILEBASE_BUCKET || 'your-filebase-bucket';
+// Support both environment variable names for flexibility
+const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME || process.env.AWS_S3_BUCKET || 'your-s3-bucket';
+const CDN_URL = process.env.AWS_S3_CDN_URL || process.env.CDN_URL;
+const USE_CDN = process.env.AWS_S3_USE_CDN === 'true' || process.env.USE_CDN === 'true';
 
-// IPFS Gateway URL for your Filebase bucket
-const IPFS_GATEWAY = process.env.IPFS_GATEWAY || 'https://spotless-orange-flea.myfilebase.com';
+// Image size configurations for different use cases
+const IMAGE_SIZES = {
+  thumbnail: { width: 32, height: 32, quality: 80, description: 'Small icons, badges' },
+  icon: { width: 64, height: 64, quality: 85, description: 'User avatars in lists' },
+  small: { width: 128, height: 128, quality: 85, description: 'Small profile pictures' },
+  medium: { width: 256, height: 256, quality: 90, description: 'Default profile pictures' },
+  large: { width: 512, height: 512, quality: 90, description: 'Large profile pictures' },
+  xlarge: { width: 1024, height: 1024, quality: 92, description: 'Full resolution' },
+  cover: { width: 1920, height: 1080, quality: 90, description: 'Cover images, banners' },
+};
 
 // Utility function to validate environment variables
 const validateConfig = () => {
   const requiredVars = [
-    'FILEBASE_ACCESS_KEY_ID',
-    'FILEBASE_SECRET_ACCESS_KEY'
+    'AWS_ACCESS_KEY_ID',
+    'AWS_SECRET_ACCESS_KEY'
   ];
   
   // Check for bucket name (either variable name works)
-  const hasBucket = process.env.FILEBASE_BUCKET_NAME || process.env.FILEBASE_BUCKET;
+  const hasBucket = process.env.AWS_S3_BUCKET_NAME || process.env.AWS_S3_BUCKET;
   if (!hasBucket) {
-    requiredVars.push('FILEBASE_BUCKET_NAME or FILEBASE_BUCKET');
+    requiredVars.push('AWS_S3_BUCKET_NAME or AWS_S3_BUCKET');
   }
   
   const missing = requiredVars.filter(varName => {
@@ -45,268 +55,159 @@ const validateConfig = () => {
   
   if (missing.length > 0 || !hasBucket) {
     const allMissing = [...missing];
-    if (!hasBucket) allMissing.push('FILEBASE_BUCKET_NAME or FILEBASE_BUCKET');
+    if (!hasBucket) allMissing.push('AWS_S3_BUCKET_NAME or AWS_S3_BUCKET');
     throw new Error(`Missing required environment variables: ${allMissing.join(', ')}`);
   }
 };
 
 /**
- * Extract IPFS CID from Filebase using HeadObject
- * @param {string} key - S3 object key
- * @returns {string} - IPFS CID
+ * Generate S3 key for user files
+ * @param {string} userId - User ID
+ * @param {string} folder - Folder name (e.g., 'profile', 'documents')
+ * @param {string} fileName - File name
+ * @param {string} size - Image size variant (optional)
+ * @returns {string} - S3 key
  */
-const extractIpfsHash = async (key) => {
-  try {
-    console.log(`Extracting IPFS CID for key: ${key}`);
-    
-    // Use HeadObject to get the CID from Filebase
-    const headCommand = new HeadObjectCommand({
-      Bucket: BUCKET_NAME,
-      Key: key
-    });
-    
-    const headResult = await filebase.send(headCommand);
-    console.log('HeadObject response metadata:', headResult.Metadata);
-    console.log('HeadObject response headers:', headResult.$metadata);
-    
-    // Filebase returns CID in different possible locations:
-    // 1. In custom metadata
-    if (headResult.Metadata && headResult.Metadata.cid) {
-      console.log(`Found CID in metadata: ${headResult.Metadata.cid}`);
-      return headResult.Metadata.cid;
-    }
-    
-    if (headResult.Metadata && headResult.Metadata.ipfshash) {
-      console.log(`Found IPFS hash in metadata: ${headResult.Metadata.ipfshash}`);
-      return headResult.Metadata.ipfshash;
-    }
-    
-    // 2. In response headers (check httpHeaders from AWS SDK response)
-    const httpHeaders = headResult.$metadata?.httpHeaders || {};
-    
-    // Check common header names that Filebase might use
-    const possibleCidHeaders = [
-      'x-amz-meta-cid',
-      'x-ipfs-hash', 
-      'x-filebase-cid',
-      'cid',
-      'ipfs-hash'
-    ];
-    
-    for (const header of possibleCidHeaders) {
-      if (httpHeaders[header]) {
-        console.log(`Found CID in header ${header}: ${httpHeaders[header]}`);
-        return httpHeaders[header];
-      }
-    }
-    
-    // 3. Try to extract from ETag if it looks like a CID
-    if (headResult.ETag) {
-      const etag = headResult.ETag.replace(/"/g, '');
-      // Check if ETag looks like an IPFS CID (starts with Qm or b)
-      if (etag.match(/^(Qm[a-zA-Z0-9]{44}|b[a-z2-7]{58})$/)) {
-        console.log(`Found CID in ETag: ${etag}`);
-        return etag;
-      }
-    }
-
-    console.warn('Could not find CID in any expected location');
-    throw new Error('CID not found in response');
-
-  } catch (error) {
-    console.error('Error extracting IPFS CID:', error);
-    throw new Error(`Failed to extract IPFS CID: ${error.message}`);
+const generateS3Key = (userId, folder, fileName, size = null) => {
+  const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
+  const timestamp = Date.now();
+  const uniqueId = uuidv4().split('-')[0]; // First part of UUID for shorter keys
+  
+  if (size) {
+    return `users/${userId}/${folder}/${size}/${timestamp}-${uniqueId}-${sanitizedFileName}`;
   }
+  
+  return `users/${userId}/${folder}/${timestamp}-${uniqueId}-${sanitizedFileName}`;
 };
 
 /**
- * Upload file to Filebase and return IPFS CID
+ * Generate public URL for S3 object
+ * @param {string} key - S3 object key
+ * @returns {string} - Public URL
+ */
+const generatePublicUrl = (key) => {
+  if (!key) {
+    return null;
+  }
+
+  // If using CDN, return CDN URL
+  if (USE_CDN && CDN_URL) {
+    return `${CDN_URL}/${key}`;
+  }
+
+  // If using AWS S3 with custom endpoint
+  if (process.env.AWS_S3_ENDPOINT) {
+    return `${process.env.AWS_S3_ENDPOINT}/${BUCKET_NAME}/${key}`;
+  }
+
+  // Default AWS S3 URL format
+  const region = process.env.AWS_S3_REGION || 'us-east-1';
+  return `https://${BUCKET_NAME}.s3.${region}.amazonaws.com/${key}`;
+};
+
+/**
+ * Upload file to S3
  * @param {Buffer} fileBuffer - File buffer
- * @param {string} fileName - File name
+ * @param {string} key - S3 object key
  * @param {string} contentType - MIME type
  * @param {Object} options - Upload options
- * @returns {Promise<string>} - IPFS CID
+ * @returns {Promise<Object>} - Upload result with URL and key
  */
-const uploadToFilebase = async (fileBuffer, fileName, contentType, options = {}) => {
+const uploadToS3 = async (fileBuffer, key, contentType, options = {}) => {
   try {
     validateConfig();
-
-    // Sanitize filename
-    const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const key = `${options.folder || 'uploads'}/${Date.now()}-${uuidv4()}-${sanitizedFileName}`;
 
     const uploadParams = {
       Bucket: BUCKET_NAME,
       Key: key,
       Body: fileBuffer,
       ContentType: contentType,
-      ACL: options.acl || 'public-read',
+      ACL: options.acl || process.env.AWS_S3_DEFAULT_ACL || 'public-read',
       Metadata: {
         uploadedAt: new Date().toISOString(),
-        originalName: fileName,
         ...options.metadata
       }
     };
 
-    // Add cache control for different file types
+    // Add cache control based on file type
     if (contentType.startsWith('image/')) {
-      uploadParams.CacheControl = 'max-age=31536000'; // 1 year for images
+      uploadParams.CacheControl = options.cacheControl || 'max-age=31536000, immutable'; // 1 year for images
     } else if (contentType.startsWith('video/') || contentType.startsWith('audio/')) {
-      uploadParams.CacheControl = 'max-age=2592000'; // 30 days for media
+      uploadParams.CacheControl = options.cacheControl || 'max-age=2592000'; // 30 days for media
     } else {
-      uploadParams.CacheControl = 'max-age=86400'; // 1 day for other files
+      uploadParams.CacheControl = options.cacheControl || 'max-age=86400'; // 1 day for other files
     }
 
-    console.log(`Uploading file to Filebase: ${key}`);
+    console.log(`Uploading file to S3: ${key}`);
 
     let uploadResult;
 
-    // Use multipart upload for larger files
-    if (fileBuffer.length > 5 * 1024 * 1024) { // 5MB threshold
+    // Use multipart upload for larger files (>5MB)
+    if (fileBuffer.length > 5 * 1024 * 1024) {
       const upload = new Upload({
-        client: filebase,
+        client: s3Client,
         params: uploadParams,
         queueSize: 4,
+        partSize: 5 * 1024 * 1024, // 5MB parts
         leavePartsOnError: false,
       });
 
       uploadResult = await upload.done();
       console.log(`File uploaded successfully (multipart): ${uploadResult.Location}`);
-      console.log('Upload result:', uploadResult);
-      
-      // Check if CID is in the upload result
-      if (uploadResult.$metadata?.httpHeaders) {
-        const headers = uploadResult.$metadata.httpHeaders;
-        console.log('Upload response headers:', headers);
-      }
-      
     } else {
       // Use simple upload for smaller files
       const command = new PutObjectCommand(uploadParams);
-      const result = await filebase.send(command);
-      uploadResult = result;
-      console.log(`File uploaded successfully`);
-      console.log('Upload result:', result);
-      
-      // Check if CID is in the response headers
-      if (result.$metadata?.httpHeaders) {
-        const headers = result.$metadata.httpHeaders;
-        console.log('Upload response headers:', headers);
-        
-        // Try to find CID in response headers
-        const possibleCidHeaders = [
-          'x-amz-meta-cid',
-          'x-ipfs-hash', 
-          'x-filebase-cid',
-          'cid',
-          'ipfs-hash'
-        ];
-        
-        for (const header of possibleCidHeaders) {
-          if (headers[header]) {
-            console.log(`Found CID in upload response header ${header}: ${headers[header]}`);
-            return headers[header];
-          }
-        }
-      }
+      uploadResult = await s3Client.send(command);
+      console.log(`File uploaded successfully: ${key}`);
     }
 
-    // Wait a moment for Filebase to process the file and generate CID
-    console.log('Waiting for Filebase to process file...');
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Try to get the IPFS CID using HeadObject
-    try {
-      const cid = await extractIpfsHash(key);
-      console.log(`IPFS CID extracted: ${cid}`);
-      return cid;
-    } catch (hashError) {
-      console.warn('Could not extract IPFS CID immediately, retrying...', hashError.message);
-      
-      // Retry after a longer wait
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-      try {
-        const cid = await extractIpfsHash(key);
-        console.log(`IPFS CID extracted on retry: ${cid}`);
-        return cid;
-      } catch (retryError) {
-        console.error('Failed to extract IPFS CID after retry:', retryError.message);
-        
-        // As a fallback, return the S3 key - you might need to map this later
-        console.warn(`Returning S3 key as fallback: ${key}`);
-        return key;
-      }
-    }
+    return {
+      key,
+      url: generatePublicUrl(key),
+      bucket: BUCKET_NAME,
+      etag: uploadResult.ETag?.replace(/"/g, ''),
+      size: fileBuffer.length
+    };
 
   } catch (error) {
-    console.error('Filebase upload error:', error);
+    console.error('S3 upload error:', error);
     throw new Error(`File upload failed: ${error.message}`);
   }
 };
 
 /**
- * Delete file from Filebase using IPFS CID or S3 key
- * @param {string} fileIdentifier - IPFS CID, S3 key, or full URL
+ * Delete file from S3
+ * @param {string} key - S3 object key or full URL
  * @returns {Promise<boolean>} - Success status
  */
-const deleteFromFilebase = async (fileIdentifier) => {
+const deleteFromS3 = async (key) => {
   try {
-    if (!fileIdentifier) {
-      console.log('No file identifier provided for deletion');
+    if (!key) {
+      console.log('No file key provided for deletion');
       return true;
     }
 
     validateConfig();
 
-    let key;
-
-    // If it's an IPFS CID, we need to find the corresponding S3 object
-    if (fileIdentifier.match(/^(Qm[a-zA-Z0-9]{44}|b[a-z2-7]{58})$/)) {
-      // This is an IPFS CID - we need to find the corresponding S3 key
-      console.log(`Attempting to delete file with IPFS CID: ${fileIdentifier}`);
-      
-      // Search for objects that might have this CID
-      try {
-        const listResult = await listFiles('', { maxKeys: 1000 });
-        const matchingFile = listResult.files.find(async (file) => {
-          try {
-            const fileCid = await extractIpfsHash(file.key);
-            return fileCid === fileIdentifier;
-          } catch {
-            return false;
-          }
-        });
-
-        if (matchingFile) {
-          key = matchingFile.key;
-        } else {
-          console.warn(`Could not find S3 object for IPFS CID: ${fileIdentifier}`);
-          return true; // Consider it deleted if we can't find it
-        }
-      } catch (searchError) {
-        console.warn('Error searching for file to delete:', searchError.message);
-        return true;
+    // Extract key from URL if full URL provided
+    if (key.startsWith('http')) {
+      const url = new URL(key);
+      // Extract key from various URL formats
+      if (url.hostname.includes('s3')) {
+        // Format: https://bucket.s3.region.amazonaws.com/key
+        key = url.pathname.substring(1);
+      } else if (CDN_URL && key.startsWith(CDN_URL)) {
+        // Format: https://cdn.example.com/key
+        key = key.substring(CDN_URL.length + 1);
       }
-    } else if (fileIdentifier.startsWith('http')) {
-      // Extract key from URL
-      const urlParts = new URL(fileIdentifier);
-      key = urlParts.pathname.substring(1); // Remove leading slash
+      
       // Remove bucket name if it's in the path
       if (key.startsWith(`${BUCKET_NAME}/`)) {
         key = key.substring(`${BUCKET_NAME}/`.length);
       }
-    } else {
-      // Assume it's already a key
-      key = fileIdentifier;
     }
 
-    if (!key) {
-      console.warn('Could not determine S3 key for deletion');
-      return true;
-    }
-
-    console.log(`Deleting file from Filebase: ${key}`);
+    console.log(`Deleting file from S3: ${key}`);
 
     const deleteParams = {
       Bucket: BUCKET_NAME,
@@ -314,78 +215,93 @@ const deleteFromFilebase = async (fileIdentifier) => {
     };
 
     const command = new DeleteObjectCommand(deleteParams);
-    await filebase.send(command);
+    await s3Client.send(command);
     console.log(`File deleted successfully: ${key}`);
     return true;
 
   } catch (error) {
-    console.error('Filebase delete error:', error);
+    console.error('S3 delete error:', error);
     // Don't throw error for delete operations to avoid blocking user actions
     return false;
   }
 };
 
 /**
- * Process and upload image with multiple sizes, returning IPFS CIDs
+ * Process and upload image with multiple sizes
  * @param {Buffer} imageBuffer - Image buffer
+ * @param {string} userId - User ID
  * @param {string} fileName - Original file name
  * @param {Object} options - Processing options
- * @returns {Promise<Object>} - Upload results with IPFS CIDs for different sizes
+ * @returns {Promise<Object>} - Upload results with URLs for different sizes
  */
-const processAndUploadImage = async (imageBuffer, fileName, options = {}) => {
+const processAndUploadImage = async (imageBuffer, userId, fileName, options = {}) => {
   try {
     const {
-      sizes = [
-        { name: 'thumbnail', width: 150, height: 150 },
-        { name: 'small', width: 300, height: 300 },
-        { name: 'medium', width: 800, height: 600 },
-        { name: 'large', width: 1920, height: 1080 }
-      ],
-      quality = 85,
+      sizes = ['thumbnail', 'icon', 'small', 'medium', 'large'],
+      folder = 'profile',
       format = 'webp',
-      folder = 'images',
-      maintainAspectRatio = true
+      maintainAspectRatio = true,
+      uploadOriginal = true
     } = options;
 
     const results = {};
     const baseName = path.parse(fileName).name;
     const sanitizedBaseName = baseName.replace(/[^a-zA-Z0-9.-]/g, '_');
 
-    console.log(`Processing image: ${fileName} with ${sizes.length} sizes`);
+    console.log(`Processing image for user ${userId}: ${fileName} with ${sizes.length} sizes`);
 
     // Validate image buffer
     const imageInfo = await sharp(imageBuffer).metadata();
     console.log(`Original image: ${imageInfo.width}x${imageInfo.height}, format: ${imageInfo.format}`);
 
-    // Upload original image (optimized)
-    const originalProcessor = sharp(imageBuffer)
-      .rotate()
-      .withMetadata();
+    // Upload original image (optimized) if requested
+    if (uploadOriginal) {
+      const originalProcessor = sharp(imageBuffer)
+        .rotate()
+        .withMetadata();
 
-    if (format === 'jpeg' || format === 'jpg') {
-      originalProcessor.jpeg({ quality: quality, progressive: true });
-    } else if (format === 'png') {
-      originalProcessor.png({ quality: quality, progressive: true });
-    } else if (format === 'webp') {
-      originalProcessor.webp({ quality: quality });
+      if (format === 'jpeg' || format === 'jpg') {
+        originalProcessor.jpeg({ quality: 92, progressive: true });
+      } else if (format === 'png') {
+        originalProcessor.png({ quality: 92, progressive: true });
+      } else if (format === 'webp') {
+        originalProcessor.webp({ quality: 92 });
+      }
+
+      const originalBuffer = await originalProcessor.toBuffer();
+      const originalKey = generateS3Key(userId, folder, `${sanitizedBaseName}.${format}`, 'original');
+      
+      results.original = await uploadToS3(
+        originalBuffer,
+        originalKey,
+        `image/${format}`,
+        { 
+          metadata: {
+            userId,
+            originalName: fileName,
+            size: 'original',
+            width: String(imageInfo.width),
+            height: String(imageInfo.height)
+          }
+        }
+      );
     }
 
-    const originalBuffer = await originalProcessor.toBuffer();
-    results.original = await uploadToFilebase(
-      originalBuffer,
-      `${sanitizedBaseName}.${format}`,
-      `image/${format}`,
-      { folder: `${folder}/original` }
-    );
-
     // Process and upload different sizes
-    for (const size of sizes) {
-      console.log(`Processing ${size.name} size: ${size.width}x${size.height}`);
+    for (const sizeName of sizes) {
+      const sizeConfig = IMAGE_SIZES[sizeName];
+      
+      if (!sizeConfig) {
+        console.warn(`Unknown size configuration: ${sizeName}, skipping`);
+        continue;
+      }
+
+      console.log(`Processing ${sizeName} size: ${sizeConfig.width}x${sizeConfig.height}`);
       
       let resizeOptions = {
-        width: size.width,
-        height: size.height,
-        fit: maintainAspectRatio ? 'inside' : 'cover',
+        width: sizeConfig.width,
+        height: sizeConfig.height,
+        fit: maintainAspectRatio ? 'cover' : 'fill',
         position: 'center',
         withoutEnlargement: true
       };
@@ -393,18 +309,29 @@ const processAndUploadImage = async (imageBuffer, fileName, options = {}) => {
       const resizedBuffer = await sharp(imageBuffer)
         .rotate()
         .resize(resizeOptions)
-        .webp({ quality: quality })
+        .webp({ quality: sizeConfig.quality })
         .toBuffer();
 
-      results[size.name] = await uploadToFilebase(
+      const key = generateS3Key(userId, folder, `${sanitizedBaseName}-${sizeName}.webp`, sizeName);
+      
+      results[sizeName] = await uploadToS3(
         resizedBuffer,
-        `${sanitizedBaseName}-${size.name}.webp`,
+        key,
         'image/webp',
-        { folder: `${folder}/${size.name}` }
+        {
+          metadata: {
+            userId,
+            originalName: fileName,
+            size: sizeName,
+            width: String(sizeConfig.width),
+            height: String(sizeConfig.height),
+            description: sizeConfig.description
+          }
+        }
       );
     }
 
-    console.log(`Image processing completed for: ${fileName}`);
+    console.log(`Image processing completed for user ${userId}: ${fileName}`);
     return results;
 
   } catch (error) {
@@ -414,29 +341,38 @@ const processAndUploadImage = async (imageBuffer, fileName, options = {}) => {
 };
 
 /**
- * Upload file with comprehensive validation, returning IPFS CID
+ * Upload file with comprehensive validation
  * @param {Object} file - Multer file object or file data
+ * @param {string} userId - User ID
  * @param {Object} options - Upload options
- * @returns {Promise<string|Object>} - IPFS CID or object with CIDs for images
+ * @returns {Promise<Object>} - Upload result with URLs
  */
-const uploadFile = async (file, options = {}) => {
+const uploadFile = async (file, userId, options = {}) => {
   try {
     const {
       allowedTypes = [
         'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/svg+xml',
-        'video/mp4', 'video/mpeg', 'video/quicktime',
-        'audio/mpeg', 'audio/wav', 'audio/mp3',
+        'video/mp4', 'video/mpeg', 'video/quicktime', 'video/webm',
+        'audio/mpeg', 'audio/wav', 'audio/mp3', 'audio/ogg',
         'application/pdf', 'text/plain',
-        'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        'application/msword', 
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       ],
-      maxSize = 50 * 1024 * 1024, // 50MB default
+      maxSize = parseInt(process.env.MAX_FILE_SIZE) || 50 * 1024 * 1024, // 50MB default
       folder = 'uploads',
-      processImages = true
+      processImages = true,
+      imageSizes = ['thumbnail', 'icon', 'small', 'medium', 'large']
     } = options;
 
     // Input validation
     if (!file || !file.buffer) {
       throw new Error('Invalid file object provided');
+    }
+
+    if (!userId) {
+      throw new Error('User ID is required for file upload');
     }
 
     // Validate file type
@@ -451,22 +387,33 @@ const uploadFile = async (file, options = {}) => {
       throw new Error(`File size ${fileSizeMB}MB exceeds maximum allowed size ${maxSizeMB}MB`);
     }
 
-    console.log(`Uploading file: ${file.originalname} (${file.mimetype}, ${(file.size / 1024).toFixed(1)}KB)`);
+    console.log(`Uploading file for user ${userId}: ${file.originalname} (${file.mimetype}, ${(file.size / 1024).toFixed(1)}KB)`);
 
     // Process images if enabled and file is an image
     if (processImages && file.mimetype.startsWith('image/') && !file.mimetype.includes('svg')) {
-      return await processAndUploadImage(file.buffer, file.originalname, { folder, ...options });
+      return await processAndUploadImage(file.buffer, userId, file.originalname, { 
+        folder, 
+        sizes: imageSizes,
+        ...options 
+      });
     }
 
-    // Upload regular file and return IPFS CID
-    const cid = await uploadToFilebase(
+    // Upload regular file
+    const key = generateS3Key(userId, folder, file.originalname);
+    const result = await uploadToS3(
       file.buffer,
-      file.originalname,
+      key,
       file.mimetype,
-      { folder }
+      {
+        metadata: {
+          userId,
+          originalName: file.originalname,
+          size: String(file.size)
+        }
+      }
     );
 
-    return cid; // Return just the IPFS CID for non-image files
+    return result;
 
   } catch (error) {
     console.error('File upload error:', error);
@@ -475,78 +422,48 @@ const uploadFile = async (file, options = {}) => {
 };
 
 /**
- * Generate IPFS URL from CID
- * @param {string} cid - IPFS CID
- * @returns {string} - Full IPFS URL
- */
-const generateIpfsUrl = (cid) => {
-  if (!cid || cid === 'default') {
-    return `${IPFS_GATEWAY}/ipfs/QmSaqA9tpYReUdr4Xw3uyvsCts5xTeHKsfdiHDiDjTUN4W`; // Default avatar
-  }
-  
-  // If it's already a full URL, return it
-  if (cid.startsWith('http')) {
-    return cid;
-  }
-  
-  // If it looks like a CID, build the full IPFS URL
-  if (cid.match(/^(Qm[a-zA-Z0-9]{44}|b[a-z2-7]{58})$/)) {
-    return `${IPFS_GATEWAY}/ipfs/${cid}`;
-  }
-  
-  // If it's an S3 key (fallback case), construct S3 URL
-  if (cid.includes('/')) {
-    return `${filebaseConfig.endpoint}/${BUCKET_NAME}/${cid}`;
-  }
-  
-  // Last resort - assume it's a CID
-  return `${IPFS_GATEWAY}/ipfs/${cid}`;
-};
-
-/**
- * Generate signed URL for private files using AWS SDK v3
- * @param {string} key - Filebase object key or IPFS CID
+ * Generate signed URL for private files
+ * @param {string} key - S3 object key
  * @param {number} expiresIn - Expiration time in seconds (default: 1 hour)
- * @returns {Promise<string>} - Signed URL or IPFS URL
+ * @returns {Promise<string>} - Signed URL
  */
 const generateSignedUrl = async (key, expiresIn = 3600) => {
   try {
-    // If it's an IPFS CID, return the IPFS URL (no signing needed for public IPFS)
-    if (key.match(/^(Qm[a-zA-Z0-9]{44}|b[a-z2-7]{58})$/)) {
-      return generateIpfsUrl(key);
-    }
-
-    // If it's already a full IPFS URL, return it
-    if (key.includes('/ipfs/')) {
-      return key;
-    }
-
-    // Otherwise, try to generate a signed URL for S3
     validateConfig();
 
-    const command = new HeadObjectCommand({
+    // Extract key from URL if full URL provided
+    if (key.startsWith('http')) {
+      const url = new URL(key);
+      if (url.hostname.includes('s3')) {
+        key = url.pathname.substring(1);
+      } else if (CDN_URL && key.startsWith(CDN_URL)) {
+        key = key.substring(CDN_URL.length + 1);
+      }
+      
+      if (key.startsWith(`${BUCKET_NAME}/`)) {
+        key = key.substring(`${BUCKET_NAME}/`.length);
+      }
+    }
+
+    const command = new GetObjectCommand({
       Bucket: BUCKET_NAME,
       Key: key
     });
 
     console.log(`Generating signed URL for: ${key} (expires in ${expiresIn}s)`);
-    const signedUrl = await getSignedUrl(filebase, command, { expiresIn });
+    const signedUrl = await getSignedUrl(s3Client, command, { expiresIn });
     
     return signedUrl;
 
   } catch (error) {
     console.error('Signed URL generation error:', error);
-    // Fallback to IPFS URL if available
-    if (key.match(/^(Qm[a-zA-Z0-9]{44}|b[a-z2-7]{58})$/)) {
-      return generateIpfsUrl(key);
-    }
     throw new Error(`Failed to generate signed URL: ${error.message}`);
   }
 };
 
 /**
- * Check if file exists in Filebase using AWS SDK v3
- * @param {string} key - Filebase object key
+ * Check if file exists in S3
+ * @param {string} key - S3 object key
  * @returns {Promise<boolean>} - File existence status
  */
 const fileExists = async (key) => {
@@ -554,7 +471,7 @@ const fileExists = async (key) => {
     validateConfig();
 
     const command = new HeadObjectCommand({ Bucket: BUCKET_NAME, Key: key });
-    await filebase.send(command);
+    await s3Client.send(command);
     console.log(`File exists: ${key}`);
     return true;
     
@@ -569,24 +486,16 @@ const fileExists = async (key) => {
 };
 
 /**
- * Get file metadata from Filebase using AWS SDK v3
- * @param {string} key - Filebase object key
- * @returns {Promise<Object>} - File metadata including IPFS CID
+ * Get file metadata from S3
+ * @param {string} key - S3 object key
+ * @returns {Promise<Object>} - File metadata
  */
 const getFileMetadata = async (key) => {
   try {
     validateConfig();
 
     const command = new HeadObjectCommand({ Bucket: BUCKET_NAME, Key: key });
-    const result = await filebase.send(command);
-
-    // Try to extract IPFS CID
-    let ipfsCid = null;
-    try {
-      ipfsCid = await extractIpfsHash(key);
-    } catch (cidError) {
-      console.warn('Could not extract IPFS CID for metadata:', cidError.message);
-    }
+    const result = await s3Client.send(command);
 
     return {
       size: result.ContentLength,
@@ -595,8 +504,7 @@ const getFileMetadata = async (key) => {
       etag: result.ETag?.replace(/"/g, ''),
       metadata: result.Metadata || {},
       cacheControl: result.CacheControl,
-      expires: result.Expires,
-      ipfsCid: ipfsCid
+      expires: result.Expires
     };
 
   } catch (error) {
@@ -606,10 +514,10 @@ const getFileMetadata = async (key) => {
 };
 
 /**
- * Copy file within Filebase using AWS SDK v3
+ * Copy file within S3
  * @param {string} sourceKey - Source file key
  * @param {string} destinationKey - Destination file key
- * @returns {Promise<string>} - New file IPFS CID
+ * @returns {Promise<Object>} - New file details
  */
 const copyFile = async (sourceKey, destinationKey) => {
   try {
@@ -619,21 +527,18 @@ const copyFile = async (sourceKey, destinationKey) => {
       Bucket: BUCKET_NAME,
       CopySource: `${BUCKET_NAME}/${sourceKey}`,
       Key: destinationKey,
-      ACL: 'public-read'
+      ACL: process.env.AWS_S3_DEFAULT_ACL || 'public-read'
     };
 
     console.log(`Copying file from ${sourceKey} to ${destinationKey}`);
     const command = new CopyObjectCommand(copyParams);
-    await filebase.send(command);
+    await s3Client.send(command);
 
-    // Try to get the IPFS CID for the new file
-    try {
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Wait for processing
-      return await extractIpfsHash(destinationKey);
-    } catch (hashError) {
-      console.warn('Could not extract IPFS CID for copied file:', hashError.message);
-      return destinationKey; // Return the key as fallback
-    }
+    return {
+      key: destinationKey,
+      url: generatePublicUrl(destinationKey),
+      bucket: BUCKET_NAME
+    };
 
   } catch (error) {
     console.error('File copy error:', error);
@@ -642,12 +547,12 @@ const copyFile = async (sourceKey, destinationKey) => {
 };
 
 /**
- * List files in a folder using AWS SDK v3
- * @param {string} folder - Folder path
+ * List files in a folder
+ * @param {string} prefix - Folder path/prefix
  * @param {Object} options - List options
- * @returns {Promise<Array>} - List of files
+ * @returns {Promise<Object>} - List of files
  */
-const listFiles = async (folder = '', options = {}) => {
+const listFiles = async (prefix = '', options = {}) => {
   try {
     validateConfig();
 
@@ -658,7 +563,7 @@ const listFiles = async (folder = '', options = {}) => {
 
     const listParams = {
       Bucket: BUCKET_NAME,
-      Prefix: folder,
+      Prefix: prefix,
       MaxKeys: maxKeys
     };
 
@@ -667,14 +572,14 @@ const listFiles = async (folder = '', options = {}) => {
     }
 
     const command = new ListObjectsV2Command(listParams);
-    const result = await filebase.send(command);
+    const result = await s3Client.send(command);
 
     const files = (result.Contents || []).map(item => ({
       key: item.Key,
       size: item.Size,
       lastModified: item.LastModified,
       etag: item.ETag?.replace(/"/g, ''),
-      url: `${filebaseConfig.endpoint}/${BUCKET_NAME}/${item.Key}`
+      url: generatePublicUrl(item.Key)
     }));
 
     return {
@@ -690,26 +595,66 @@ const listFiles = async (folder = '', options = {}) => {
 };
 
 /**
+ * Delete all files for a user
+ * @param {string} userId - User ID
+ * @param {string} folder - Specific folder to delete (optional)
+ * @returns {Promise<Object>} - Deletion results
+ */
+const deleteUserFiles = async (userId, folder = null) => {
+  try {
+    validateConfig();
+
+    const prefix = folder ? `users/${userId}/${folder}/` : `users/${userId}/`;
+    console.log(`Deleting all files for user ${userId} in ${prefix}`);
+
+    // List all files for the user
+    const listResult = await listFiles(prefix, { maxKeys: 1000 });
+    
+    if (listResult.files.length === 0) {
+      console.log(`No files found for user ${userId}`);
+      return { deleted: 0, failed: 0 };
+    }
+
+    // Delete all files
+    const deletePromises = listResult.files.map(file => deleteFromS3(file.key));
+    const results = await Promise.allSettled(deletePromises);
+
+    const deleted = results.filter(r => r.status === 'fulfilled' && r.value === true).length;
+    const failed = results.filter(r => r.status === 'rejected' || r.value === false).length;
+
+    console.log(`Deleted ${deleted} files, ${failed} failed for user ${userId}`);
+
+    return { deleted, failed, total: listResult.files.length };
+
+  } catch (error) {
+    console.error('Delete user files error:', error);
+    throw new Error(`Failed to delete user files: ${error.message}`);
+  }
+};
+
+/**
  * Local file storage fallback (for development)
  */
 const localStorage = {
-  async upload(fileBuffer, fileName, contentType, options = {}) {
+  async upload(fileBuffer, key, contentType, options = {}) {
     try {
-      const uploadsDir = path.join(process.cwd(), 'uploads', options.folder || '');
+      const uploadsDir = path.join(process.cwd(), 'uploads', path.dirname(key));
 
       // Create directory if it doesn't exist
       await fs.mkdir(uploadsDir, { recursive: true });
 
-      const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
-      const uniqueFileName = `${Date.now()}-${uuidv4()}-${sanitizedFileName}`;
-      const filePath = path.join(uploadsDir, uniqueFileName);
-
+      const filePath = path.join(process.cwd(), 'uploads', key);
       await fs.writeFile(filePath, fileBuffer);
 
-      // Return local URL (simulating IPFS CID format)
-      const localUrl = `/uploads/${options.folder || ''}/${uniqueFileName}`.replace(/\/+/g, '/');
+      const localUrl = `/uploads/${key}`.replace(/\/+/g, '/');
       console.log(`File saved locally: ${localUrl}`);
-      return `local_${uuidv4().replace(/-/g, '')}${Date.now()}`; // Mock IPFS CID
+      
+      return {
+        key,
+        url: localUrl,
+        bucket: 'local',
+        size: fileBuffer.length
+      };
 
     } catch (error) {
       console.error('Local storage error:', error);
@@ -717,18 +662,13 @@ const localStorage = {
     }
   },
 
-  async delete(fileUrl) {
+  async delete(key) {
     try {
-      if (!fileUrl || (!fileUrl.startsWith('/uploads/') && !fileUrl.startsWith('local_'))) return true;
+      if (!key) return true;
 
-      if (fileUrl.startsWith('local_')) {
-        console.log(`Mock deletion of local file: ${fileUrl}`);
-        return true;
-      }
-
-      const filePath = path.join(process.cwd(), fileUrl);
+      const filePath = path.join(process.cwd(), 'uploads', key);
       await fs.unlink(filePath);
-      console.log(`Local file deleted: ${fileUrl}`);
+      console.log(`Local file deleted: ${key}`);
       return true;
 
     } catch (error) {
@@ -743,24 +683,25 @@ const localStorage = {
  */
 const initializeStorage = () => {
   try {
-    // Check if Filebase credentials are available
-    const hasAccessKey = process.env.FILEBASE_ACCESS_KEY_ID;
-    const hasSecretKey = process.env.FILEBASE_SECRET_ACCESS_KEY;
-    const hasBucket = process.env.FILEBASE_BUCKET_NAME || process.env.FILEBASE_BUCKET;
+    const hasAccessKey = process.env.AWS_ACCESS_KEY_ID;
+    const hasSecretKey = process.env.AWS_SECRET_ACCESS_KEY;
+    const hasBucket = process.env.AWS_S3_BUCKET_NAME || process.env.AWS_S3_BUCKET;
     
     if (!hasAccessKey || !hasSecretKey || !hasBucket) {
-      console.warn('⚠️  Filebase credentials not found. Using local storage fallback.');
+      console.warn('⚠️  AWS S3 credentials not found. Using local storage fallback.');
       console.warn('Required environment variables:');
-      console.warn('- FILEBASE_ACCESS_KEY_ID');
-      console.warn('- FILEBASE_SECRET_ACCESS_KEY');
-      console.warn('- FILEBASE_BUCKET_NAME (or FILEBASE_BUCKET)');
+      console.warn('- AWS_ACCESS_KEY_ID');
+      console.warn('- AWS_SECRET_ACCESS_KEY');
+      console.warn('- AWS_S3_BUCKET_NAME (or AWS_S3_BUCKET)');
       return false;
     }
 
-    console.log('✅ Filebase storage initialized with AWS SDK v3');
+    console.log('✅ AWS S3 storage initialized');
     console.log(`📦 Bucket: ${BUCKET_NAME}`);
-    console.log(`🌐 Endpoint: ${filebaseConfig.endpoint}`);
-    console.log(`🔗 IPFS Gateway: ${IPFS_GATEWAY}`);
+    console.log(`🌐 Region: ${process.env.AWS_S3_REGION || 'us-east-1'}`);
+    if (USE_CDN) {
+      console.log(`🔗 CDN: ${CDN_URL}`);
+    }
     return true;
     
   } catch (error) {
@@ -770,68 +711,75 @@ const initializeStorage = () => {
 };
 
 // Initialize and determine storage method
-const useFilebase = initializeStorage();
+const useS3 = initializeStorage();
 
 // Export functions based on environment
 module.exports = {
-  // Main functions - return IPFS CIDs
-  uploadToFilebase: useFilebase ? uploadToFilebase : localStorage.upload,
-  deleteFromFilebase: useFilebase ? deleteFromFilebase : localStorage.delete,
-  processAndUploadImage: useFilebase ? processAndUploadImage : async (buffer, fileName, options = {}) => {
+  // Main functions
+  uploadToS3: useS3 ? uploadToS3 : localStorage.upload,
+  deleteFromS3: useS3 ? deleteFromS3 : localStorage.delete,
+  processAndUploadImage: useS3 ? processAndUploadImage : async (buffer, userId, fileName, options = {}) => {
     try {
       const processedBuffer = await sharp(buffer)
         .rotate()
         .webp({ quality: 85 })
         .toBuffer();
       
-      const result = await localStorage.upload(processedBuffer, fileName, 'image/webp', options);
-      return { original: result }; // Returns mock IPFS hash
+      const key = `users/${userId}/profile/default/${fileName}`;
+      const result = await localStorage.upload(processedBuffer, key, 'image/webp', options);
+      return { medium: result };
     } catch (error) {
       console.error('Local image processing error:', error);
-      const result = await localStorage.upload(buffer, fileName, 'image/jpeg', options);
-      return { original: result };
+      const key = `users/${userId}/profile/default/${fileName}`;
+      const result = await localStorage.upload(buffer, key, 'image/jpeg', options);
+      return { medium: result };
     }
   },
-  uploadFile: useFilebase ? uploadFile : async (file, options = {}) => {
-    const result = await localStorage.upload(file.buffer, file.originalname, file.mimetype, options);
-    return result; // Returns mock IPFS hash
+  uploadFile: useS3 ? uploadFile : async (file, userId, options = {}) => {
+    const key = `users/${userId}/${options.folder || 'uploads'}/${file.originalname}`;
+    return await localStorage.upload(file.buffer, key, file.mimetype, options);
   },
 
   // URL generation
-  generateIpfsUrl,
+  generatePublicUrl,
 
-  // Advanced functions (only available with Filebase)
-  generateSignedUrl: useFilebase ? generateSignedUrl : async (key) => {
+  // Advanced functions
+  generateSignedUrl: useS3 ? generateSignedUrl : async (key) => {
     console.warn('Signed URLs not available in local storage mode');
-    return key.startsWith('local_') ? `/uploads/mock/${key}` : key;
+    return `/uploads/${key}`;
   },
-  fileExists: useFilebase ? fileExists : async () => {
+  fileExists: useS3 ? fileExists : async () => {
     console.warn('File existence check not available in local storage mode');
     return true;
   },
-  getFileMetadata: useFilebase ? getFileMetadata : async () => {
+  getFileMetadata: useS3 ? getFileMetadata : async () => {
     console.warn('File metadata not available in local storage mode');
     return {};
   },
-  copyFile: useFilebase ? copyFile : async (source, dest) => {
+  copyFile: useS3 ? copyFile : async (source, dest) => {
     console.warn('File copying not available in local storage mode');
-    return `local_${uuidv4().replace(/-/g, '')}${Date.now()}`;
+    return { key: dest, url: `/uploads/${dest}` };
   },
-  listFiles: useFilebase ? listFiles : async () => {
+  listFiles: useS3 ? listFiles : async () => {
     console.warn('File listing not available in local storage mode');
     return { files: [], isTruncated: false };
+  },
+  deleteUserFiles: useS3 ? deleteUserFiles : async (userId, folder) => {
+    console.warn('Bulk delete not available in local storage mode');
+    return { deleted: 0, failed: 0, total: 0 };
   },
 
   // Utility functions
   validateConfig,
-  extractIpfsHash,
+  generateS3Key,
 
   // Storage info
-  isFilebaseEnabled: useFilebase,
+  isS3Enabled: useS3,
   bucketName: BUCKET_NAME,
-  ipfsGateway: IPFS_GATEWAY,
+  cdnUrl: CDN_URL,
+  imageSizes: IMAGE_SIZES,
   
-  // Backward compatibility aliases
-  uploadToS3: useFilebase ? uploadToFilebase : localStorage.upload,
-  deleteFromS3: useFilebase ? deleteFromFilebase : localStorage.delete,
+  // Backward compatibility
+  upload: useS3 ? uploadToS3 : localStorage.upload,
+  delete: useS3 ? deleteFromS3 : localStorage.delete,
 };

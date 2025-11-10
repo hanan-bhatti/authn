@@ -123,7 +123,7 @@ const emailTemplates = {
         }
         .company-logo {
             font-weight: bold;
-            color: #1877f2;
+            color: ${process.env.EMAIL_PRIMARY_COLOR || '#1877f2'};
             font-size: 18px;
             margin-bottom: 10px;
         }
@@ -147,9 +147,9 @@ const emailTemplates = {
 <body>
     <div class="container">
         <div class="header">
-            <img src="https://spotless-orange-flea.myfilebase.com/ipfs/QmZ7KzNrnnFMb7omqMpZvJXxdRddHT7XuJgSd9PUUCJ3yj" alt="TransitFlow Logo" class="logo">
+            <img src="${process.env.EMAIL_LOGO_URL || 'https://spotless-orange-flea.myfilebase.com/ipfs/QmZ7KzNrnnFMb7omqMpZvJXxdRddHT7XuJgSd9PUUCJ3yj'}" alt="${process.env.APP_NAME || 'Authn'} Logo" class="logo">
             <img src="https://spotless-orange-flea.myfilebase.com/ipfs/QmSaqA9tpYReUdr4Xw3uyvsCts5xTeHKsfdiHDiDjTUN4W" alt="User Profile" class="user-profile">
-            <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: #1c1e21;">One more step to sign up</h1>
+            <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: #1c1e21;">One more step to sign up to ${process.env.APP_NAME || 'Authn'}</h1>
         </div>
         
         <div class="content">
@@ -168,33 +168,33 @@ const emailTemplates = {
             <div class="warning-section">
                 <div class="warning-title">If someone asks for this code</div>
                 <div class="warning-text">
-                    Don't share this code with anyone, especially if they tell you that they work for TransitFlow.
+                    Don't share this code with anyone, especially if they tell you that they work for ${process.env.APP_NAME || 'Authn'}.
                 </div>
             </div>
             
             <div class="signature">
                 Thanks,<br>
-                TransitFlow Security
+                ${process.env.APP_NAME || 'Authn'} Security
             </div>
         </div>
         
         <div class="help-section">
             <div>Wondering if this email is really from us? Visit the Help Centre to confirm: 
-                <a href="${data.helpUrl || '#'}" class="help-link">transitflow.com/help/check-email</a>
+                <a href="${data.helpUrl || process.env.FRONTEND_URL || 'authn.com'}/help/check-email" class="help-link">Help Center</a>
             </div>
         </div>
         
         <div class="footer">
-            <div class="company-logo">TransitFlow</div>
+            <div class="company-logo" style="color: ${process.env.EMAIL_PRIMARY_COLOR || '#1877f2'};">${process.env.EMAIL_COMPANY_NAME || process.env.APP_NAME || 'Authn'}</div>
             <div class="company-info">
-                ${data.companyAddress || 'TransitFlow Inc., Attention: Community Support, 123 Transit Street, Your City, State 12345'}
+                ${process.env.EMAIL_COMPANY_ADDRESS || 'Authn Inc., Attention: Community Support, 123 Authn Street, Your City, State 12345'}
             </div>
             <div class="email-sent-to">
                 This message was sent to <strong>${data.email}</strong>.
             </div>
             <div class="privacy-note">
                 To help keep your account secure, please don't forward this email. 
-                <a href="${data.learnMoreUrl || '#'}" class="help-link">Learn more</a>
+                <a href="${data.privacyUrl || process.env.APP_PRIVACY_URL || '#'}" class="help-link">Privacy Policy</a> | <a href="${data.termsUrl || process.env.APP_TERMS_URL || '#'}" class="help-link">Terms of Service</a>
             </div>
         </div>
     </div>
@@ -267,10 +267,7 @@ const emailTemplates = {
             text-align: center;
             margin: 25px 0;
         }
-        .reset-button {
-            display: inline-block;
-            padding: 12px 24px;
-            background-color: #2563eb;
+            background-color: ${process.env.EMAIL_PRIMARY_COLOR || '#2563eb'};
             color: white;
             text-decoration: none;
             border-radius: 6px;
@@ -329,7 +326,7 @@ const emailTemplates = {
         }
         .company-logo {
             font-weight: bold;
-            color: #2563eb;
+            color: ${process.env.EMAIL_PRIMARY_COLOR || '#2563eb'};
             font-size: 18px;
             margin-bottom: 10px;
         }
@@ -362,7 +359,7 @@ const emailTemplates = {
 <body>
     <div class="container">
         <div class="header">
-            <img src="https://spotless-orange-flea.myfilebase.com/ipfs/QmZ7KzNrnnFMb7omqMpZvJXxdRddHT7XuJgSd9PUUCJ3yj" alt="TransitFlow Logo" class="logo">
+            <img src="${process.env.EMAIL_LOGO_URL || 'https://spotless-orange-flea.myfilebase.com/ipfs/QmZ7KzNrnnFMb7omqMpZvJXxdRddHT7XuJgSd9PUUCJ3yj'}" alt="${process.env.APP_NAME || 'Authn'} Logo" class="logo">
             <img src="https://spotless-orange-flea.myfilebase.com/ipfs/QmSaqA9tpYReUdr4Xw3uyvsCts5xTeHKsfdiHDiDjTUN4W" alt="User Profile" class="user-profile">
             <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: #1c1e21;">Reset your password</h1>
         </div>
@@ -371,7 +368,7 @@ const emailTemplates = {
             <div class="greeting">Hi ${data.name},</div>
             
             <div class="main-text">
-                We received a request to reset your password for your TransitFlow account. Click the button below to create a new password:
+                We received a request to reset your password for your ${process.env.APP_NAME || 'Authn'} account. Click the button below to create a new password:
             </div>
             
             <div class="button-container">
@@ -391,7 +388,7 @@ const emailTemplates = {
             
             <div class="signature">
                 Thanks,<br>
-                TransitFlow Security
+                The ${process.env.APP_NAME || 'Authn'} Team
             </div>
         </div>
         
@@ -401,16 +398,16 @@ const emailTemplates = {
         </div>
         
         <div class="footer">
-            <div class="company-logo">TransitFlow</div>
+            <div class="company-logo">${process.env.EMAIL_COMPANY_NAME || process.env.APP_NAME || 'Authn'}</div>
             <div class="company-info">
-                ${data.companyAddress || 'TransitFlow Inc., Attention: Community Support, 123 Transit Street, Your City, State 12345'}
+                ${process.env.EMAIL_COMPANY_ADDRESS || 'Authn Inc., Attention: Community Support, 123 Authn Street, Your City, State 12345'}
             </div>
             <div class="email-sent-to">
                 This message was sent to <strong>${data.email}</strong>.
             </div>
             <div class="privacy-note">
                 To help keep your account secure, please don't forward this email. 
-                <a href="${data.learnMoreUrl || '#'}" class="help-link">Learn more</a>
+                <a href="${data.privacyUrl || process.env.APP_PRIVACY_URL || '#'}" class="help-link">Privacy Policy</a> | <a href="${data.termsUrl || process.env.APP_TERMS_URL || '#'}" class="help-link">Terms of Service</a>
             </div>
         </div>
     </div>
@@ -428,198 +425,197 @@ const emailTemplates = {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Welcome to TransitFlow</title>
-    <style>
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
-            line-height: 1.6; 
-            color: #1c1e21; 
-            margin: 0; 
-            padding: 20px; 
-            background-color: #f0f2f5; 
-        }
-        .container { 
-            max-width: 500px; 
-            margin: 0 auto; 
-            background-color: #ffffff; 
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-        .header { 
-            background-color: #ffffff;
-            padding: 30px 30px 20px 30px; 
-            border-bottom: 1px solid #e4e6ea;
-            position: relative;
-        }
-        .logo {
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: block;
-        }
-        .user-profile {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            float: right;
-            margin-top: -5px;
-        }
-        .content { 
-            padding: 20px 30px 30px 30px; 
-        }
-        .greeting {
-            font-size: 16px;
-            color: #1c1e21;
-            margin-bottom: 20px;
-        }
-        .main-text {
-            font-size: 16px;
-            color: #1c1e21;
-            margin-bottom: 20px;
-            line-height: 1.5;
-        }
-        .stats-container {
-            background-color: #f7f8fa;
-            border-radius: 6px;
-            padding: 20px;
-            margin: 25px 0;
-        }
-        .stats-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 20px;
-            text-align: center;
-        }
-        .stat-item {
-            padding: 10px;
-        }
-        .stat-number {
-            font-size: 24px;
-            font-weight: bold;
-            color: #2563eb;
-            margin-bottom: 5px;
-        }
-        .stat-label {
-            font-size: 12px;
-            color: #65676b;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .next-steps {
-            margin: 25px 0;
-        }
-        .steps-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #1c1e21;
-            margin-bottom: 20px;
-        }
-        .step-item {
-            background-color: #f7f8fa;
-            border-radius: 6px;
-            padding: 15px;
-            margin-bottom: 12px;
-            border-left: 3px solid #2563eb;
-        }
-        .step-title {
-            font-weight: 600;
-            color: #1c1e21;
-            margin-bottom: 5px;
-        }
-        .step-description {
-            color: #65676b;
-            font-size: 14px;
-        }
-        .button-container {
-            text-align: center;
-            margin: 25px 0;
-        }
-        .get-started-button {
-            display: inline-block;
-            padding: 12px 24px;
-            background-color: #2563eb;
-            color: white;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 16px;
-        }
-        .get-started-button:hover {
-            background-color: #1d4ed8;
-        }
-        .help-section {
-            background-color: #e7f3ff;
-            border: 1px solid #b3d9ff;
-            border-radius: 6px;
-            padding: 20px;
-            margin: 25px 0;
-        }
-        .help-title {
-            font-weight: 600;
-            color: #1c1e21;
-            margin-bottom: 10px;
-        }
-        .help-text {
-            color: #1c1e21;
-            font-size: 16px;
-            line-height: 1.5;
-            margin: 0;
-        }
-        .signature {
-            margin-top: 25px;
-            color: #1c1e21;
-        }
-        .footer {
-            background-color: #f7f8fa;
-            padding: 20px;
-            text-align: center;
-            font-size: 14px;
-            color: #65676b;
-        }
-        .company-logo {
-            font-weight: bold;
-            color: #2563eb;
-            font-size: 18px;
-            margin-bottom: 10px;
-        }
-        .company-info {
-            font-size: 12px;
-            color: #8a8d91;
-            line-height: 1.4;
-        }
-        .email-sent-to {
-            margin-top: 15px;
-            font-size: 12px;
-            color: #8a8d91;
-        }
-        .privacy-note {
-            margin-top: 10px;
-            font-size: 12px;
-            color: #8a8d91;
-        }
-        .help-link {
-            color: #2563eb;
-            text-decoration: none;
-        }
-        .help-link:hover {
-            text-decoration: underline;
-        }
-    </style>
-</head>
+        <style>
+            body { 
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
+                line-height: 1.6; 
+                color: #1c1e21; 
+                margin: 0; 
+                padding: 20px; 
+                background-color: #f0f2f5; 
+            }
+            .container { 
+                max-width: 500px; 
+                margin: 0 auto; 
+                background-color: #ffffff; 
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                overflow: hidden;
+            }
+            .header { 
+                background-color: #ffffff;
+                padding: 30px 30px 20px 30px; 
+                border-bottom: 1px solid #e4e6ea;
+                position: relative;
+            }
+            .logo {
+                width: 40px;
+                height: 40px;
+                border-radius: 8px;
+                margin-bottom: 20px;
+                display: block;
+            }
+            .user-profile {
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                float: right;
+                margin-top: -5px;
+            }
+            .content { 
+                padding: 20px 30px 30px 30px; 
+            }
+            .greeting {
+                font-size: 16px;
+                color: #1c1e21;
+                margin-bottom: 20px;
+            }
+            .main-text {
+                font-size: 16px;
+                color: #1c1e21;
+                margin-bottom: 20px;
+                line-height: 1.5;
+            }
+            .stats-container {
+                background-color: #f7f8fa;
+                border-radius: 6px;
+                padding: 20px;
+                margin: 25px 0;
+            }
+            .stats-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr 1fr;
+                gap: 20px;
+                text-align: center;
+            }
+            .stat-item {
+                padding: 10px;
+            }
+            .stat-number {
+                font-size: 24px;
+                font-weight: bold;
+                color: ${process.env.EMAIL_PRIMARY_COLOR || '#2563eb'};
+                margin-bottom: 5px;
+            }
+            .stat-label {
+                font-size: 12px;
+                color: #65676b;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+            .next-steps {
+                margin: 25px 0;
+            }
+            .steps-title {
+                    font-size: 18px;
+                    font-weight: 600;
+                    color: #1c1e21;
+                    margin-bottom: 20px;
+                }
+                .step-item {
+                    background-color: #f7f8fa;
+                    border-radius: 6px;
+                    padding: 15px;
+                    margin-bottom: 12px;
+                    border-left: 3px solid ${process.env.EMAIL_PRIMARY_COLOR || '#2563eb'};
+                }
+                .step-title {
+                    font-weight: 600;
+                    color: #1c1e21;
+                    margin-bottom: 5px;
+                }
+                .step-description {
+                    color: #65676b;
+                    font-size: 14px;
+                }
+                .button-container {
+                    text-align: center;
+                    margin: 25px 0;
+                }
+                .get-started-button {
+                    display: inline-block;
+                    padding: 12px 24px;
+                    background-color: ${process.env.EMAIL_PRIMARY_COLOR || '#2563eb'};
+                    color: white;
+                    text-decoration: none;
+                    border-radius: 6px;
+                    font-weight: 600;
+                    font-size: 16px;
+                }
+                .get-started-button:hover {
+                    background-color: #1d4ed8;
+                }
+                .help-section {
+                    background-color: #e7f3ff;
+                    border: 1px solid #b3d9ff;
+                    border-radius: 6px;
+                    padding: 20px;
+                    margin: 25px 0;
+                }
+                .help-title {
+                    font-weight: 600;
+                    color: #1c1e21;
+                    margin-bottom: 10px;
+                }
+                .help-text {
+                    color: #1c1e21;
+                    font-size: 16px;
+                    line-height: 1.5;
+                    margin: 0;
+                }
+                .signature {
+                    margin-top: 25px;
+                    color: #1c1e21;
+                }
+                .footer {
+                    background-color: #f7f8fa;
+                    padding: 20px;
+                    text-align: center;
+                    font-size: 14px;
+                    color: #65676b;
+                }
+                .company-logo {
+                    font-weight: bold;
+                    color: ${process.env.EMAIL_PRIMARY_COLOR || '#2563eb'};
+                    font-size: 18px;
+                    margin-bottom: 10px;
+                }
+                .company-info {
+                    font-size: 12px;
+                    color: #8a8d91;
+                    line-height: 1.4;
+                }
+                .email-sent-to {
+                    margin-top: 15px;
+                    font-size: 12px;
+                    color: #8a8d91;
+                }
+                .privacy-note {
+                    margin-top: 10px;
+                    font-size: 12px;
+                    color: #8a8d91;
+                }
+                .help-link {
+                    color: ${process.env.EMAIL_PRIMARY_COLOR || '#2563eb'};
+                    text-decoration: none;
+                }
+                .help-link:hover {
+                    text-decoration: underline;
+                }
+            </style></head>
 <body>
     <div class="container">
         <div class="header">
-            <img src="https://spotless-orange-flea.myfilebase.com/ipfs/QmZ7KzNrnnFMb7omqMpZvJXxdRddHT7XuJgSd9PUUCJ3yj" alt="TransitFlow Logo" class="logo">
+            <img src="${process.env.EMAIL_LOGO_URL || 'https://spotless-orange-flea.myfilebase.com/ipfs/QmZ7KzNrnnFMb7omqMpZvJXxdRddHT7XuJgSd9PUUCJ3yj'}" alt="${process.env.APP_NAME || 'Authn'} Logo" class="logo">
             <img src="https://spotless-orange-flea.myfilebase.com/ipfs/QmSaqA9tpYReUdr4Xw3uyvsCts5xTeHKsfdiHDiDjTUN4W" alt="User Profile" class="user-profile">
-            <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: #1c1e21;">Welcome to TransitFlow</h1>
+            <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: #1c1e21;">Welcome to ${process.env.APP_NAME || 'Authn'}</h1>
         </div>
         
         <div class="content">
             <div class="greeting">Hi ${data.name},</div>
             
             <div class="main-text">
-                Welcome to TransitFlow! We're excited to have you join our community of professionals. ${data.loginMethod ? `Your account has been successfully created using ${data.loginMethod}.` : 'Your account has been successfully created.'}
+                Welcome to ${process.env.APP_NAME || 'Authn'}! We're excited to have you join our community of professionals. ${data.loginMethod ? `Your account has been successfully created using ${data.loginMethod}.` : 'Your account has been successfully created.'}
             </div>
             
             <div class="stats-container">
@@ -654,7 +650,7 @@ const emailTemplates = {
                 
                 <div class="step-item">
                     <div class="step-title">Set Your Goals</div>
-                    <div class="step-description">Define your objectives and let TransitFlow help you achieve them with tailored recommendations.</div>
+                    <div class="step-description">Define your objectives and let ${process.env.APP_NAME || 'Authn'} help you achieve them with tailored recommendations.</div>
                 </div>
                 
                 <div class="step-item">
@@ -664,34 +660,35 @@ const emailTemplates = {
             </div>
             
             <div class="button-container">
-                <a href="${data.dashboardUrl || '#'}" class="get-started-button">Get Started Now</a>
+                <a href="${data.dashboardUrl || (process.env.NODE_ENV === 'production' ? process.env.PROD_DASHBOARD_URL : process.env.DASHBOARD_URL) || '#'}" class="get-started-button">Get Started Now</a>
             </div>
             
             <div class="help-section">
                 <div class="help-title">Need Help?</div>
-                <div class="help-text">Our dedicated support team is here to assist you 24/7. Don't hesitate to reach out if you have any questions or need guidance getting started.</div>
+                <div class="help-text">Our dedicated support team is here to assist you 24/7. Don't hesitate to reach out if you have any questions or need guidance getting started. You can contact us at <a href="mailto:${process.env.APP_SUPPORT_EMAIL || 'support@yourdomain.com'}" class="help-link">${process.env.APP_SUPPORT_EMAIL || 'support@yourdomain.com'}</a>.</div>
             </div>
             
             <div class="main-text">
-                We're committed to providing you with the best possible experience. Thank you for choosing TransitFlow as your trusted partner.
+                We're committed to providing you with the best possible experience. Thank you for choosing ${process.env.APP_NAME || 'Authn'} as your trusted partner.
             </div>
             
             <div class="signature">
                 Best regards,<br>
-                The TransitFlow Team
+                The ${process.env.APP_NAME || 'Authn'} Team
             </div>
         </div>
         
         <div class="footer">
-            <div class="company-logo">TransitFlow</div>
+            <div class="company-logo">${process.env.EMAIL_COMPANY_NAME || process.env.APP_NAME || 'Authn'}</div>
             <div class="company-info">
-                ${data.companyAddress || 'TransitFlow Inc., Attention: Community Support, 123 Transit Street, Your City, State 12345'}
+                ${process.env.EMAIL_COMPANY_ADDRESS || 'Authn Inc., Attention: Community Support, 123 Authn Street, Your City, State 12345'}
             </div>
             <div class="email-sent-to">
                 This message was sent to <strong>${data.email}</strong>.
             </div>
             <div class="privacy-note">
                 This is an automated message. For questions, visit our <a href="${data.helpUrl || '#'}" class="help-link">Help Center</a> or contact support.
+                <a href="${data.privacyUrl || process.env.APP_PRIVACY_URL || '#'}" class="help-link">Privacy Policy</a> | <a href="${data.termsUrl || process.env.APP_TERMS_URL || '#'}" class="help-link">Terms of Service</a>
             </div>
         </div>
     </div>
@@ -856,7 +853,7 @@ const emailTemplates = {
         }
         .security-list li:before {
             content: "•";
-            color: #2563eb;
+            color: ${process.env.EMAIL_PRIMARY_COLOR || '#2563eb'};
             position: absolute;
             left: 0;
         }
@@ -902,7 +899,7 @@ const emailTemplates = {
             color: #8a8d91;
         }
         .help-link {
-            color: #2563eb;
+            color: ${process.env.EMAIL_PRIMARY_COLOR || '#2563eb'};
             text-decoration: none;
         }
         .help-link:hover {
@@ -913,7 +910,7 @@ const emailTemplates = {
 <body>
     <div class="container">
         <div class="header">
-            <img src="https://spotless-orange-flea.myfilebase.com/ipfs/QmZ7KzNrnnFMb7omqMpZvJXxdRddHT7XuJgSd9PUUCJ3yj" alt="TransitFlow Logo" class="logo">
+            <img src="https://spotless-orange-flea.myfilebase.com/ipfs/QmZ7KzNrnnFMb7omqMpZvJXxdRddHT7XuJgSd9PUUCJ3yj" alt="${process.env.APP_NAME || 'Authn'} Logo" class="logo">
             <img src="${data.userProfilePic || 'https://spotless-orange-flea.myfilebase.com/ipfs/QmSaqA9tpYReUdr4Xw3uyvsCts5xTeHKsfdiHDiDjTUN4W'}" alt="User Profile" class="user-profile">
             <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: #1c1e21;">New Device Login Detected</h1>
         </div>
@@ -972,20 +969,21 @@ const emailTemplates = {
             
             <div class="signature">
                 Stay secure,<br>
-                TransitFlow Security Team
+                The ${process.env.APP_NAME || 'Authn'} Security Team
             </div>
         </div>
         
         <div class="footer">
-            <div class="company-logo">TransitFlow</div>
+            <div class="company-logo">${process.env.EMAIL_COMPANY_NAME || process.env.APP_NAME || 'Authn'}</div>
             <div class="company-info">
-                ${data.companyAddress || 'TransitFlow Inc., Attention: Community Support, 123 Transit Street, Your City, State 12345'}
+                ${process.env.EMAIL_COMPANY_ADDRESS || 'Authn Inc., Attention: Community Support, 123 Authn Street, Your City, State 12345'}
             </div>
             <div class="email-sent-to">
                 This message was sent to <strong>${data.email}</strong>.
             </div>
             <div class="privacy-note">
-                This is an automated security message. For urgent concerns, contact our <a href="${data.supportUrl || '#'}" class="help-link">support team</a> immediately.
+                This is an automated security message. For urgent concerns, contact our <a href="${data.supportUrl || `mailto:${process.env.APP_SUPPORT_EMAIL || 'support@yourdomain.com'}`}" class="help-link">support team</a> immediately.
+                <a href="${data.privacyUrl || process.env.APP_PRIVACY_URL || '#'}" class="help-link">Privacy Policy</a> | <a href="${data.termsUrl || process.env.APP_TERMS_URL || '#'}" class="help-link">Terms of Service</a>
             </div>
         </div>
     </div>
@@ -1081,7 +1079,7 @@ const emailTemplates = {
         }
         .info-list li:before {
             content: "•";
-            color: #2563eb;
+            color: ${process.env.EMAIL_PRIMARY_COLOR || '#2563eb'};
             position: absolute;
             left: 0;
         }
@@ -1098,7 +1096,7 @@ const emailTemplates = {
         }
         .company-logo {
             font-weight: bold;
-            color: #2563eb;
+            color: ${process.env.EMAIL_PRIMARY_COLOR || '#2563eb'};
             font-size: 18px;
             margin-bottom: 10px;
         }
@@ -1122,7 +1120,7 @@ const emailTemplates = {
 <body>
     <div class="container">
         <div class="header">
-            <img src="https://spotless-orange-flea.myfilebase.com/ipfs/QmZ7KzNrnnFMb7omqMpZvJXxdRddHT7XuJgSd9PUUCJ3yj" alt="TransitFlow Logo" class="logo">
+            <img src="${process.env.EMAIL_LOGO_URL || 'https://spotless-orange-flea.myfilebase.com/ipfs/QmZ7KzNrnnFMb7omqMpZvJXxdRddHT7XuJgSd9PUUCJ3yj'}" alt="${process.env.APP_NAME || 'Authn'} Logo" class="logo">
             <img src="${data.userProfilePic || 'https://spotless-orange-flea.myfilebase.com/ipfs/QmSaqA9tpYReUdr4Xw3uyvsCts5xTeHKsfdiHDiDjTUN4W'}" alt="User Profile" class="user-profile">
             <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: #1c1e21;">Account Successfully Deleted</h1>
         </div>
@@ -1144,7 +1142,7 @@ const emailTemplates = {
             </div>
             
             <div class="main-text">
-                We're sorry to see you go, but we understand that TransitFlow may not be for everyone.
+                We're sorry to see you go, but we understand that ${process.env.APP_NAME || 'Authn'} may not be for everyone.
             </div>
             
             <div class="main-text">
@@ -1157,20 +1155,21 @@ const emailTemplates = {
             
             <div class="signature">
                 Best regards,<br>
-                The TransitFlow Team
+                The ${process.env.APP_NAME || 'Authn'} Team
             </div>
         </div>
         
         <div class="footer">
-            <div class="company-logo">TransitFlow</div>
+            <div class="company-logo">${process.env.EMAIL_COMPANY_NAME || process.env.APP_NAME || 'Authn'}</div>
             <div class="company-info">
-                ${data.companyAddress || 'TransitFlow Inc., Attention: Community Support, 123 Transit Street, Your City, State 12345'}
+                ${process.env.EMAIL_COMPANY_ADDRESS || 'Authn Inc., Attention: Community Support, 123 Authn Street, Your City, State 12345'}
             </div>
             <div class="email-sent-to">
                 This message was sent to <strong>${data.email}</strong>.
             </div>
             <div class="privacy-note">
                 This is an automated message, please do not reply to this email.
+                <a href="${data.privacyUrl || process.env.APP_PRIVACY_URL || '#'}" class="help-link">Privacy Policy</a> | <a href="${data.termsUrl || process.env.APP_TERMS_URL || '#'}" class="help-link">Terms of Service</a>
             </div>
         </div>
     </div>
@@ -1306,7 +1305,7 @@ const emailTemplates = {
         }
         .company-logo {
             font-weight: bold;
-            color: #2563eb;
+            color: ${process.env.EMAIL_PRIMARY_COLOR || '#2563eb'};
             font-size: 18px;
             margin-bottom: 10px;
         }
@@ -1339,7 +1338,7 @@ const emailTemplates = {
 <body>
     <div class="container">
         <div class="header">
-            <img src="https://spotless-orange-flea.myfilebase.com/ipfs/QmZ7KzNrnnFMb7omqMpZvJXxdRddHT7XuJgSd9PUUCJ3yj" alt="TransitFlow Logo" class="logo">
+            <img src="${process.env.EMAIL_LOGO_URL || 'https://spotless-orange-flea.myfilebase.com/ipfs/QmZ7KzNrnnFMb7omqMpZvJXxdRddHT7XuJgSd9PUUCJ3yj'}" alt="${process.env.APP_NAME || 'Authn'} Logo" class="logo">
             <img src="${data.userProfilePic || 'https://spotless-orange-flea.myfilebase.com/ipfs/QmSaqA9tpYReUdr4Xw3uyvsCts5xTeHKsfdiHDiDjTUN4W'}" alt="User Profile" class="user-profile">
             <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: #1c1e21;">Account Deletion Request</h1>
         </div>
@@ -1385,20 +1384,21 @@ const emailTemplates = {
             
             <div class="signature">
                 Best regards,<br>
-                The TransitFlow Team
+                The ${process.env.APP_NAME || 'Authn'} Team
             </div>
         </div>
         
         <div class="footer">
-            <div class="company-logo">TransitFlow</div>
+            <div class="company-logo">${process.env.EMAIL_COMPANY_NAME || process.env.APP_NAME || 'Authn'}</div>
             <div class="company-info">
-                ${data.companyAddress || 'TransitFlow Inc., Attention: Community Support, 123 Transit Street, Your City, State 12345'}
+                ${process.env.EMAIL_COMPANY_ADDRESS || 'Authn Inc., Attention: Community Support, 123 Authn Street, Your City, State 12345'}
             </div>
             <div class="email-sent-to">
                 This message was sent to <strong>${data.email}</strong>.
             </div>
             <div class="privacy-note">
                 This is an automated message, please do not reply to this email.
+                <a href="${data.privacyUrl || process.env.APP_PRIVACY_URL || '#'}" class="help-link">Privacy Policy</a> | <a href="${data.termsUrl || process.env.APP_TERMS_URL || '#'}" class="help-link">Terms of Service</a>
             </div>
         </div>
     </div>
@@ -1412,32 +1412,19 @@ const emailTemplates = {
 let transporter = null;
 
 const createTransporter = () => {
-  const emailService = process.env.EMAIL_SERVICE || 'gmail';
-
-  if (emailService === 'smtp') {
-    // Custom SMTP configuration
-    return nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT || 587,
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
-      },
-      tls: {
-        rejectUnauthorized: false
-      }
-    });
-  } else {
-    // Gmail or other service
-    return nodemailer.createTransport({
-      service: emailService,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS // App password for Gmail
-      }
-    });
-  }
+  // Custom SMTP configuration
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT || '587', 10),
+    secure: process.env.SMTP_SECURE === 'true', // Use 'true' string for boolean check
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS
+    },
+    tls: {
+      rejectUnauthorized: false
+    }
+  });
 };
 
 /**
@@ -1445,7 +1432,7 @@ const createTransporter = () => {
  */
 const initializeEmailService = async () => {
   try {
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
       console.warn('⚠️  Email credentials not found. Email service will be disabled.');
       return false;
     }
@@ -1470,6 +1457,17 @@ const initializeEmailService = async () => {
  */
 const sendEmail = async (options) => {
   try {
+    if (process.env.EMAIL_ENABLED === 'false') {
+      console.log('📧 Email sending is disabled. Logging email instead:');
+      console.log('Email Details:', {
+        to: options.to,
+        subject: options.subject || emailTemplates[options.template]?.subject,
+        template: options.template,
+        data: options.data
+      });
+      return { success: true, messageId: 'disabled-email', method: 'console-disabled' };
+    }
+
     if (!transporter) {
       console.warn('Email service not initialized. Logging email instead:');
       console.log('Email Details:', {
@@ -1504,7 +1502,7 @@ const sendEmail = async (options) => {
     const mailOptions = {
       from: {
         name: process.env.EMAIL_FROM_NAME || 'Your App',
-        address: process.env.EMAIL_FROM || process.env.EMAIL_USER
+        address: process.env.EMAIL_FROM || process.env.SMTP_USER
       },
       to: Array.isArray(to) ? to.join(', ') : to,
       subject: emailSubject,
@@ -1612,10 +1610,10 @@ const sendNotificationEmail = async (to, type, title, message, data = {}) => {
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f5f5f5; }
         .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
-        .header { background-color: #6f42c1; color: white; padding: 20px; text-align: center; }
+        .header { background-color: ${process.env.EMAIL_PRIMARY_COLOR || '#6f42c1'}; color: white; padding: 20px; text-align: center; }
         .content { padding: 30px 20px; }
         .footer { background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 14px; color: #6c757d; }
-        .notification-box { background-color: #f8f9fa; border-left: 4px solid #007bff; padding: 20px; margin: 20px 0; }
+        .notification-box { background-color: #f8f9fa; border-left: 4px solid ${process.env.EMAIL_PRIMARY_COLOR || '#007bff'}; padding: 20px; margin: 20px 0; }
     </style>
 </head>
 <body>
@@ -1629,7 +1627,7 @@ const sendNotificationEmail = async (to, type, title, message, data = {}) => {
                 <p>${message}</p>
             </div>
             
-            <p>Best regards,<br>The Team</p>
+            <p>Best regards,<br>The ${process.env.APP_NAME || 'Authn'} Team</p>
         </div>
         <div class="footer">
             <p>This is an automated notification. Please do not reply to this email.</p>

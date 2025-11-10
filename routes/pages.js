@@ -8,8 +8,13 @@ const serveAuthPage = (req, res) => {
     res.sendFile(path.join(__dirname, '../public', 'auth.html'));
 };
 
-// All auth-related routes serve the same HTML file
-const authRoutes = ['/', '/login', '/register', '/signup', '/forgot-password', '/verify-email', '/2fa', '/backup-code'];
+// Server status page for root
+router.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public', 'server-status.html'));
+});
+
+// All auth-related routes serve the auth HTML file
+const authRoutes = ['/login', '/register', '/signup', '/forgot-password', '/verify-email', '/2fa', '/backup-code'];
 
 authRoutes.forEach(route => {
     router.get(route, serveAuthPage);

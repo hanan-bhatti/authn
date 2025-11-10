@@ -4,7 +4,7 @@ const path = require('path');
 
 class IslamicDatesFetcher {
     constructor(apiKey, useMongoDb = false, mongoConnection = null) {
-        this.apiKey = apiKey;
+        this.apiKey = process.env.CALENDARIFIC_API_KEY || apiKey;
         this.useMongoDb = useMongoDb;
         this.mongoConnection = mongoConnection;
         this.cacheFilePath = path.join(__dirname, 'islamic_dates_cache.json');

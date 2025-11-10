@@ -10,7 +10,7 @@ class UserBackupService {
     this.backupPath = options.backupPath || './backups';
     this.compressionEnabled = options.compressionEnabled !== false;
     this.encryptionEnabled = options.encryptionEnabled === true;
-    this.encryptionKey = options.encryptionKey;
+    this.encryptionKey = process.env.BACKUP_ENCRYPTION_KEY || options.encryptionKey;
     this.retentionDays = options.retentionDays || 365;
 
     if (this.encryptionEnabled && !this.encryptionKey) {
@@ -23,6 +23,9 @@ class UserBackupService {
   }
 
   async createUserBackup(user, backupType = 'manual', metadata = {}) {
+    if (process.env.BACKUP_ENABLED !== 'true') {
+      return;
+    }
     try {
       const userData = user.toObject();
       delete userData.passwordHash;
@@ -67,6 +70,9 @@ class UserBackupService {
   }
 
   async cleanupExpiredBackups() {
+    if (process.env.BACKUP_ENABLED !== 'true') {
+      return;
+    }
     try {
       const files = fs.readdirSync(this.backupPath);
       const now = new Date();
@@ -117,8 +123,12 @@ class UserMaintenanceScheduler {
   }
 
   start() {
+    if (process.env.BACKUP_ENABLED !== 'true') {
+      console.log('Backup is disabled. Maintenance scheduler will not start.');
+      return;
+    }
     // Schedule cleanup to run daily at midnight
-    cron.schedule('0 0 * * *', async () => {
+    cron.schedule(process.env.BACKUP_CRON_SCHEDULE || '0 0 * * *', async () => {
       console.log('Running daily maintenance tasks...');
       await this.backupService.cleanupExpiredBackups();
       await this.cleanupService.cleanupExpiredUserData();

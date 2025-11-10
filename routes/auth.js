@@ -6,8 +6,12 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const speakeasy = require('speakeasy');
 const QRCode = require('qrcode');
+const passport = require('passport');
 
 const User = require('../models/User');
+const Session = require('../models/Session');
+const AuditLog = require('../models/AuditLog');
+const Notification = require('../models/Notification');
 const {
   authenticateToken,
   userRateLimit,
@@ -29,15 +33,24 @@ const {
   sanitizeUser,
   generateUsernameSuggestions,
 } = require('../utils/helpers');
+const { generateToken } = require('../utils/jwt');
+const { setTokenCookie } = require('../utils/cookies');
 const { sendEmail } = require('../services/email');
 const {
-  verifyIdToken,
-  extractUserDataFromToken,
-  getClientFirebaseConfig
-} = require('../services/firebaseService');
+  isDeviceTrusted,
+  shouldBypassDeviceVerification,
+  sendNewDeviceNotification,
+  getDeviceRiskScore,
+  logDeviceAccess
+} = require('../utils/deviceSecurity');
+
+const config = require('../utils/config');
 
 
 const router = express.Router();
+
+// NOTE: JWT_PRIVATE_KEY and JWT_PUBLIC_KEY are only used if an asymmetric JWT_ALGORITHM (e.g., RS256) is configured.
+// For symmetric algorithms (e.g., HS256), only JWT_SECRET is required.
 
 // =============================================================================
 // GLOBAL MIDDLEWARE APPLICATION
@@ -65,16 +78,17 @@ router.use(deviceFingerprint);
 // =============================================================================
 
 const authLimiter = rateLimit({
-  windowMs: parseInt(process.env.AUTH_RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes
-  max: parseInt(process.env.AUTH_RATE_LIMIT_MAX_REQUESTS || '5'),
+  windowMs: parseInt(process.env.AUTH_RATE_LIMIT_WINDOW_MS, 10) || 900000, // 15 minutes
+  max: parseInt(process.env.AUTH_RATE_LIMIT_MAX_REQUESTS, 10) || 5,
   message: {
     success: false,
     message: 'Too many authentication attempts. Please try again in a minute.',
     code: 'RATE_LIMIT_EXCEEDED',
-    retryAfter: Math.ceil(parseInt(process.env.AUTH_RATE_LIMIT_WINDOW_MS || '900000') / 1000)
+    retryAfter: Math.ceil((parseInt(process.env.AUTH_RATE_LIMIT_WINDOW_MS, 10) || 900000) / 1000)
   },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => process.env.DEV_DISABLE_RATE_LIMITING === 'true',
   handler: (req, res) => {
     const resetTime = new Date(req.rateLimit.resetTime);
     const now = new Date();
@@ -89,8 +103,8 @@ const authLimiter = rateLimit({
       code: 'RATE_LIMIT_EXCEEDED',
       data: {
         retryAfter: timeRemaining,
-        maxAttempts: parseInt(process.env.AUTH_RATE_LIMIT_MAX_REQUESTS || '5'),
-        windowMs: parseInt(process.env.AUTH_RATE_LIMIT_WINDOW_MS || '900000'),
+        maxAttempts: parseInt(process.env.AUTH_RATE_LIMIT_MAX_REQUESTS, 10) || 5,
+        windowMs: parseInt(process.env.AUTH_RATE_LIMIT_WINDOW_MS, 10) || 900000,
         resetTime: resetTime.toISOString()
       }
     }));
@@ -107,6 +121,7 @@ const generalLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => process.env.DEV_DISABLE_RATE_LIMITING === 'true',
   handler: (req, res) => {
     const resetTime = new Date(req.rateLimit.resetTime);
     const now = new Date();
@@ -126,8 +141,8 @@ const generalLimiter = rateLimit({
 });
 
 const passwordResetLimiter = rateLimit({
-  windowMs: parseInt(process.env.PASSWORD_RESET_RATE_LIMIT_WINDOW_MS || '3600000'), // 1 hour
-  max: parseInt(process.env.PASSWORD_RESET_RATE_LIMIT_MAX_REQUESTS || '3'),
+  windowMs: parseInt(process.env.PASSWORD_RESET_RATE_LIMIT_WINDOW_MS, 10) || 3600000, // 1 hour
+  max: parseInt(process.env.PASSWORD_RESET_RATE_LIMIT_MAX_REQUESTS, 10) || 3,
   message: {
     success: false,
     message: 'Too many password reset attempts. Please try again later.',
@@ -135,6 +150,7 @@ const passwordResetLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => process.env.DEV_DISABLE_RATE_LIMITING === 'true',
   handler: (req, res) => {
     const resetTime = new Date(req.rateLimit.resetTime);
     const now = new Date();
@@ -166,8 +182,8 @@ const passwordResetLimiter = rateLimit({
 });
 
 const emailVerificationLimiter = rateLimit({
-  windowMs: parseInt(process.env.EMAIL_VERIFICATION_RATE_LIMIT_WINDOW_MS || '600000'), // 10 minutes
-  max: parseInt(process.env.EMAIL_VERIFICATION_RATE_LIMIT_MAX_REQUESTS || '3'),
+  windowMs: parseInt(process.env.EMAIL_VERIFICATION_RATE_LIMIT_WINDOW_MS, 10) || 600000, // 10 minutes
+  max: parseInt(process.env.EMAIL_VERIFICATION_RATE_LIMIT_MAX_REQUESTS, 10) || 3,
   message: {
     success: false,
     message: 'Too many verification attempts. Please try again later.',
@@ -175,6 +191,7 @@ const emailVerificationLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => process.env.DEV_DISABLE_RATE_LIMITING === 'true',
   handler: (req, res) => {
     const resetTime = new Date(req.rateLimit.resetTime);
     const now = new Date();
@@ -204,6 +221,7 @@ const twoFAVerifyLimit = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => process.env.DEV_DISABLE_RATE_LIMITING === 'true',
   handler: (req, res) => {
     const resetTime = new Date(req.rateLimit.resetTime);
     const now = new Date();
@@ -348,27 +366,19 @@ const loginValidation = [
 // =============================================================================
 
 /**
- * Check if device is trusted for user
- */
-async function isDeviceTrusted(user, deviceInfo) {
-  if (!user.trustedDevices || !deviceInfo?.deviceId) {
-    return false;
-  }
-
-  return user.trustedDevices.some(device =>
-    device.deviceId === deviceInfo.deviceId &&
-    device.isTrusted &&
-    device.isActive !== false
-  );
-}
-
-/**
  * Send device verification email
  */
 const sendDeviceVerificationEmail = async (user, deviceInfo, req) => {
+  if (process.env.NEW_DEVICE_EMAIL_NOTIFICATION !== 'true') {
+    console.log('New device email notification is disabled.');
+    return;
+  }
   try {
     // Generate verification token
-    const verificationToken = user.generateDeviceVerificationToken(deviceInfo);
+    const verificationToken = user.generateDeviceVerificationToken(
+      deviceInfo,
+      parseInt(process.env.DEVICE_VERIFICATION_EXPIRY, 10) || 86400000
+    );
 
     // Save user with pending verification
     await user.save();
@@ -433,32 +443,7 @@ async function markDeviceAsTrusted(user, deviceInfo, isRegistration = false) {
   await user.save();
 }
 
-// =============================================================================
-// FIREBASE CONFIGURATION
-// =============================================================================
 
-/**
- * @route   GET /api/auth/firebase-config
- * @desc    Get Firebase configuration for client
- * @access  Public
- */
-router.get('/firebase-config',
-  generalLimiter,
-  logActivity('firebase_config_access'),
-  asyncHandler(async (req, res) => {
-    try {
-      const config = getClientFirebaseConfig();
-
-      res.json(new ApiResponse({
-        success: true,
-        message: 'Firebase configuration retrieved successfully',
-        data: { config }
-      }));
-    } catch (error) {
-      throw new ApiError('Unable to retrieve Firebase configuration', 500, 'FIREBASE_CONFIG_ERROR');
-    }
-  })
-);
 
 // =============================================================================
 // REGISTRATION ROUTES
@@ -470,6 +455,17 @@ router.get('/firebase-config',
  * @access  Public
  */
 router.post('/register',
+  (req, res, next) => {
+    if (!config.FEATURE_REGISTRATION_ENABLED) {
+      return res.status(403).json(new ApiResponse({
+        success: false,
+        error: 'Registration is disabled',
+        message: 'User registration is currently disabled. Please try again later.',
+        code: 'REGISTRATION_DISABLED'
+      }));
+    }
+    next();
+  },
   authLimiter,
   ipRateLimit(10, 15 * 60 * 1000), // 10 registrations per IP per 15 minutes
   registerValidation,
@@ -564,7 +560,7 @@ router.post('/register',
           passwordHash: password,
           firstName: sanitizedFirstName,
           lastName: sanitizedLastName,
-          role: 'user',
+          role: config.DEFAULT_USER_ROLE,
           dateOfBirth: parsedDateOfBirth,
           createdAt: new Date(),
           updatedAt: new Date()
@@ -575,7 +571,9 @@ router.post('/register',
         user = new User(userData);
 
         // Generate email verification OTP
-        verificationOTP = user.generateEmailVerificationOTP();
+        verificationOTP = user.generateEmailVerificationOTP(
+          parseInt(process.env.EMAIL_VERIFICATION_EXPIRY, 10) || 600000
+        );
 
         // Mark registration device as trusted immediately
         await markDeviceAsTrusted(user, req.deviceInfo, true);
@@ -610,6 +608,46 @@ router.post('/register',
       });
     } catch (transactionError) {
       console.error('Registration transaction error:', transactionError);
+
+      // Handle duplicate key errors (E11000)
+      if (transactionError.code === 11000) {
+        let message = 'Duplicate field value entered';
+        let field = 'unknown';
+        let code = 'DUPLICATE_FIELD';
+
+        if (transactionError.keyPattern) {
+          field = Object.keys(transactionError.keyPattern)[0];
+          switch (field) {
+            case 'email':
+              message = 'Email address is already registered';
+              code = 'EMAIL_ALREADY_EXISTS';
+              break;
+            case 'username':
+              message = 'Username is already taken';
+              code = 'USERNAME_ALREADY_EXISTS';
+              break;
+            case 'phone':
+              message = 'An account with this phone number already exists';
+              code = 'PHONE_ALREADY_EXISTS';
+              break;
+            default:
+              message = `This ${field} is already in use`;
+          }
+        }
+
+        return res.status(409).json(new ApiResponse({
+          success: false,
+          error: message,
+          message: message,
+          code: code,
+          data: {
+            field: field,
+            [field]: req.body[field],
+            suggestion: field === 'email' ? 'Try logging in or use password reset if you forgot your password' : null,
+            suggestions: field === 'username' ? generateUsernameSuggestions(req.body.username) : null
+          }
+        }));
+      }
 
       return res.status(500).json(new ApiResponse({
         success: false,
@@ -683,240 +721,817 @@ router.post('/register',
   })
 );
 
+
+
+// =============================================================================
+// GOOGLE OAUTH ROUTES
+// =============================================================================
+
 /**
- * @route   POST /api/auth/google
- * @desc    Register/Login with Google OAuth
+ * @route   GET /api/auth/google
+ * @desc    Authenticate with Google
  * @access  Public
  */
-router.post('/google',
-  authLimiter,
-  ipRateLimit(20, 15 * 60 * 1000),
-  [
-    body('idToken').notEmpty().withMessage('Google ID token is required'),
-    
-    body('username').optional().isLength({ min: 3, max: 30 }).matches(/^[a-zA-Z0-9_]+$/)
-  ],
-  validateRequest,
-  logActivity('google_auth'),
-  asyncHandler(async (req, res) => {
-    const { idToken, firstName, lastName, username, rememberMe = false } = req.body;
-
-    if (!req.deviceInfo || !req.deviceInfo.deviceId) {
-      throw new ApiError('Device information is required for security', 400, 'DEVICE_INFO_REQUIRED');
-    }
-
-    // Verify Firebase token
-    let decodedToken, googleUserData;
-    try {
-      decodedToken = await verifyIdToken(idToken);
-      googleUserData = extractUserDataFromToken(decodedToken);
-    } catch (firebaseError) {
-      throw new ApiError('Invalid Google authentication token', 401, 'INVALID_GOOGLE_TOKEN');
-    }
-
-    // Check if user already exists
-    let user = await User.findOne({
-      $or: [
-        { 'socialAccounts.provider': 'google', 'socialAccounts.providerId': googleUserData.googleId },
-        { email: googleUserData.email }
-      ],
-      isDeleted: false
-    });
-
-    if (user) {
-      // Existing user - login flow with trusted device check
-      if (!user.isActive) {
-        throw new ApiError('Account has been deactivated', 403, 'ACCOUNT_DEACTIVATED');
-      }
-
-      // Check if device is trusted
-      const deviceTrusted = await isDeviceTrusted(user, req.deviceInfo);
-
-      if (!deviceTrusted) {
-        // Send device verification email
-        await sendDeviceVerificationEmail(user, req.deviceInfo, req);
-
-        user.addAuditLog('LOGIN_BLOCKED_UNTRUSTED_DEVICE', {
-          deviceInfo: req.deviceInfo,
-          loginMethod: 'google'
-        }, req);
-
-        return res.status(403).json(new ApiResponse({
-          success: false,  // Changed from true to false
-          error: 'Device verification required',  // Clear error message
-          message: 'For your security, please verify this device using the link sent to your email.',
-          code: 'DEVICE_NOT_TRUSTED',
-          data: {
-            requiresDeviceVerification: true,
-            email: user.email.substring(0, 3) + '***' + user.email.substring(user.email.indexOf('@')),
-            verificationMessage: 'For your security, please verify this device using the link sent to your email.'
-          }
-        }));
-      }
-
-      // Link Google account if not already linked
-      if (!user.hasSocialProvider('google')) {
-        user.socialAccounts.push({
-          provider: 'google',
-          providerId: googleUserData.googleId,
-          email: googleUserData.email,
-          displayName: googleUserData.displayName,
-          profilePicture: googleUserData.profilePicture
-        });
-        user.isEmailVerified = googleUserData.isEmailVerified || user.isEmailVerified;
-      }
-
-      // Update login info and create session
-      user.updateLoginInfo(req.deviceInfo);
-      user.addDevice(req.deviceInfo);
-
-      const expiresIn = rememberMe ? 30 * 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
-      const sessionId = user.createSession(req.deviceInfo, expiresIn);
-
-      await user.save();
-
-      // Generate JWT
-      const token = jwt.sign(
-        {
-          userId: user._id,
-          sessionId,
-          role: user.role
-        },
-        process.env.JWT_SECRET,
-        { expiresIn: rememberMe ? '30d' : '7d' }
-      );
-
-      // Set secure HTTP-only cookie
-      res.cookie('token', token, {
-        httpOnly: process.env.COOKIE_HTTP_ONLY === 'true',
-        secure: process.env.COOKIE_SECURE === 'true',
-        sameSite: process.env.COOKIE_SAME_SITE || (process.env.NODE_ENV === 'production' ? 'strict' : 'lax'),
-        maxAge: parseInt(process.env.COOKIE_MAX_AGE) || expiresIn,
-        path: process.env.COOKIE_PATH || '/'
-      });
-
-      user.addAuditLog('LOGIN_SUCCESS', {
-        sessionId,
-        loginMethod: 'google',
-        deviceTrusted: true,
-        rememberMe
-      }, req);
-
-      return res.json(new ApiResponse({
-        success: true,
-        message: 'Login successful',
-        data: {
-          user: sanitizeUser(user),
-          sessionId,
-          
-          deviceTrusted: true
-        }
-      }));
-    }
-
-    // New user registration with Google
-    if (!userType || !username) {
-      return res.status(400).json(new ApiResponse({
+router.get('/google',
+  (req, res, next) => {
+    if (!(config.SOCIAL_LOGIN_ENABLED && config.GOOGLE_AUTH_ENABLED)) {
+      return res.status(403).json(new ApiResponse({
         success: false,
-        error: 'Additional information required for new account',
-        code: 'REGISTRATION_INFO_REQUIRED',
-        data: {
-          requiresRegistration: true,
-          userData: googleUserData,
-          suggestedUsernames: generateUsernameSuggestions(
-            googleUserData.firstName || googleUserData.displayName || 'user'
-          )
-        }
+        error: 'Google login is disabled',
+        message: 'Google login is currently disabled. Please try another login method.',
+        code: 'GOOGLE_LOGIN_DISABLED'
       }));
     }
+    next();
+  },
+  passport.authenticate('google', { scope: ['profile', 'email'] })
+);
 
-    // Check if username is available
-    const existingUsername = await User.findByUsername(username);
-    if (existingUsername) {
-      throw new ApiError('Username already taken', 409, 'USERNAME_TAKEN');
+/**
+ * @route   GET /api/auth/google/callback
+ * @desc    Google OAuth callback
+ * @access  Public
+ */
+router.get('/google/callback',
+  (req, res, next) => {
+    if (!(config.SOCIAL_LOGIN_ENABLED && config.GOOGLE_AUTH_ENABLED)) {
+      return res.status(403).json(new ApiResponse({
+        success: false,
+        error: 'Google login is disabled',
+        message: 'Google login is currently disabled. Please try another login method.',
+        code: 'GOOGLE_LOGIN_DISABLED'
+      }));
+    }
+    next();
+  },
+  passport.authenticate('google', { failureRedirect: '/login', session: false }), // session: false because we use JWTs
+  asyncHandler(async (req, res) => {
+    // Successful authentication, generate JWT and set cookie
+    const user = req.user; // User object from Passport's done() callback
+
+    if (!user) {
+      throw new ApiError('Google authentication failed', 401, 'GOOGLE_AUTH_FAILED');
     }
 
-    // Create new user with Google data
-    user = new User({
-      firstName: firstName || googleUserData.firstName,
-      lastName: lastName || googleUserData.lastName,
-      username: username.toLowerCase().trim(),
-      email: googleUserData.email,
-      phone: phone?.trim(),
-      userType,
-      isEmailVerified: googleUserData.isEmailVerified,
-      socialAccounts: [{
-        provider: 'google',
-        providerId: googleUserData.googleId,
-        email: googleUserData.email,
-        displayName: googleUserData.displayName,
-        profilePicture: googleUserData.profilePicture
-      }]
-    });
-
-    // Mark registration device as trusted
-    await markDeviceAsTrusted(user, req.deviceInfo, true);
-
-    // Add device and audit log
-    user.addDevice(req.deviceInfo);
-    user.addAuditLog('GOOGLE_REGISTRATION', {
-      userType,
-      deviceTrusted: true
-    }, req);
+    // Check if device info is available (from deviceFingerprint middleware)
+    if (!req.deviceInfo || !req.deviceInfo.deviceId) {
+      // This scenario should ideally not happen if deviceFingerprint is correctly applied globally
+      // For social logins, we might need to handle this differently or ensure client sends it
+      console.warn('Device information missing during Google OAuth callback.');
+      // Decide how to handle: redirect to an error page, or proceed with a less secure session
+      // For now, we'll proceed but log the warning.
+    }
 
     // Update login info and create session
     user.updateLoginInfo(req.deviceInfo);
-    const sessionId = user.createSession(req.deviceInfo);
+    user.addDevice(req.deviceInfo);
+
+    const rememberMe = false; // For social login, assume no "remember me" unless explicitly handled
+    const expiresIn = parseInt(process.env.COOKIE_MAX_AGE_DEFAULT, 10) || 7 * 24 * 60 * 60 * 1000; // 7 days
+    const sessionId = await user.createSession(req.deviceInfo, expiresIn);
 
     await user.save();
 
-    // Send welcome email
-    try {
-      await sendEmail({
-        to: user.email,
-        subject: 'Welcome to Authn',
-        template: 'welcome',
-        data: {
-          name: user.fullName || user.username,
-          email: user.email,
-          dashboardUrl: process.env.NODE_ENV === 'production' ? process.env.PROD_DASHBOARD_URL : process.env.DASHBOARD_URL,
-          loginMethod: 'Google'
-        }
-      });
-    } catch (emailError) {
-      console.error('Welcome email error:', emailError);
-    }
+    // Create session in Session collection (normalized schema)
+    await Session.createSession(user._id, sessionId, req.deviceInfo, expiresIn);
 
     // Generate JWT
-    const token = jwt.sign(
+    const token = generateToken(
       {
         userId: user._id,
         sessionId,
         role: user.role
       },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
+      rememberMe
     );
 
     // Set secure HTTP-only cookie
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: '/'
-    });
+    setTokenCookie(res, token, rememberMe);
 
-    res.status(201).json(new ApiResponse({
-      success: true,
-      message: 'Account created successfully with Google',
-      data: {
-        user: sanitizeUser(user),
+    user.addAuditLog('LOGIN_SUCCESS', {
+      sessionId,
+      loginMethod: 'google',
+      deviceTrusted: true, // Assuming trusted for social login callback
+      rememberMe
+    }, req);
+
+    // Redirect to dashboard or a success page
+    const redirectUrl = process.env.NODE_ENV === 'production' ? process.env.PROD_DASHBOARD_URL : process.env.DASHBOARD_URL;
+    res.redirect(redirectUrl);
+  })
+);
+
+// =============================================================================
+// GOOGLE OAUTH ROUTES
+// =============================================================================
+
+/**
+ * @route   GET /api/auth/google
+ * @desc    Authenticate with Google
+ * @access  Public
+ */
+router.get('/google',
+  (req, res, next) => {
+  if (!(config.SOCIAL_LOGIN_ENABLED && config.GOOGLE_AUTH_ENABLED)) {
+      return res.status(403).json(new ApiResponse({
+        success: false,
+        error: 'Google login is disabled',
+        message: 'Google login is currently disabled. Please try another login method.',
+        code: 'GOOGLE_LOGIN_DISABLED'
+      }));
+    }
+    next();
+  },
+  passport.authenticate('google', { scope: ['profile', 'email'] })
+);
+
+/**
+ * @route   GET /api/auth/google/callback
+ * @desc    Google OAuth callback
+ * @access  Public
+ */
+router.get('/google/callback',
+  (req, res, next) => {
+  if (!(config.SOCIAL_LOGIN_ENABLED && config.GOOGLE_AUTH_ENABLED)) {
+      return res.status(403).json(new ApiResponse({
+        success: false,
+        error: 'Google login is disabled',
+        message: 'Google login is currently disabled. Please try another login method.',
+        code: 'GOOGLE_LOGIN_DISABLED'
+      }));
+    }
+    next();
+  },
+  passport.authenticate('google', { failureRedirect: '/login', session: false }), // session: false because we use JWTs
+  asyncHandler(async (req, res) => {
+    // Successful authentication, generate JWT and set cookie
+    const user = req.user; // User object from Passport's done() callback
+
+    if (!user) {
+      throw new ApiError('Google authentication failed', 401, 'GOOGLE_AUTH_FAILED');
+    }
+
+    // Check if device info is available (from deviceFingerprint middleware)
+    if (!req.deviceInfo || !req.deviceInfo.deviceId) {
+      // This scenario should ideally not happen if deviceFingerprint is correctly applied globally
+      // For social logins, we might need to handle this differently or ensure client sends it
+      console.warn('Device information missing during Google OAuth callback.');
+      // Decide how to handle: redirect to an error page, or proceed with a less secure session
+      // For now, we'll proceed but log the warning.
+    }
+
+    // Update login info and create session
+    user.updateLoginInfo(req.deviceInfo);
+    user.addDevice(req.deviceInfo);
+
+    const rememberMe = false; // For social login, assume no "remember me" unless explicitly handled
+    const expiresIn = parseInt(process.env.COOKIE_MAX_AGE_DEFAULT, 10) || 7 * 24 * 60 * 60 * 1000; // 7 days
+    const sessionId = await user.createSession(req.deviceInfo, expiresIn);
+
+    await user.save();
+
+    // Create session in Session collection (normalized schema)
+    await Session.createSession(user._id, sessionId, req.deviceInfo, expiresIn);
+
+    // Generate JWT
+    const token = generateToken(
+      {
+        userId: user._id,
         sessionId,
-        
-        deviceTrusted: true
-      }
-    }));
+        role: user.role
+      },
+      rememberMe
+    );
+
+    // Set secure HTTP-only cookie
+    setTokenCookie(res, token, rememberMe);
+
+    user.addAuditLog('LOGIN_SUCCESS', {
+      sessionId,
+      loginMethod: 'google',
+      deviceTrusted: true, // Assuming trusted for social login callback
+      rememberMe
+    }, req);
+
+    // Redirect to dashboard or a success page
+    const redirectUrl = process.env.NODE_ENV === 'production' ? process.env.PROD_DASHBOARD_URL : process.env.DASHBOARD_URL;
+    res.redirect(redirectUrl);
+  })
+);
+
+// =============================================================================
+// FACEBOOK OAUTH ROUTES
+// =============================================================================
+
+/**
+ * @route   GET /api/auth/facebook
+ * @desc    Authenticate with Facebook
+ * @access  Public
+ */
+router.get('/facebook',
+  (req, res, next) => {
+  if (!(config.SOCIAL_LOGIN_ENABLED && config.FACEBOOK_AUTH_ENABLED)) {
+      return res.status(403).json(new ApiResponse({
+        success: false,
+        error: 'Facebook login is disabled',
+        message: 'Facebook login is currently disabled. Please try another login method.',
+        code: 'FACEBOOK_LOGIN_DISABLED'
+      }));
+    }
+    next();
+  },
+  passport.authenticate('facebook', { scope: ['email', 'public_profile'] })
+);
+
+/**
+ * @route   GET /api/auth/facebook/callback
+ * @desc    Facebook OAuth callback
+ * @access  Public
+ */
+router.get('/facebook/callback',
+  (req, res, next) => {
+  if (!(config.SOCIAL_LOGIN_ENABLED && config.FACEBOOK_AUTH_ENABLED)) {
+      return res.status(403).json(new ApiResponse({
+        success: false,
+        error: 'Facebook login is disabled',
+        message: 'Facebook login is currently disabled. Please try another login method.',
+        code: 'FACEBOOK_LOGIN_DISABLED'
+      }));
+    }
+    next();
+  },
+  passport.authenticate('facebook', { failureRedirect: '/login', session: false }),
+  asyncHandler(async (req, res) => {
+    const user = req.user;
+
+    if (!user) {
+      throw new ApiError('Facebook authentication failed', 401, 'FACEBOOK_AUTH_FAILED');
+    }
+
+    if (!req.deviceInfo || !req.deviceInfo.deviceId) {
+      console.warn('Device information missing during Facebook OAuth callback.');
+    }
+
+    user.updateLoginInfo(req.deviceInfo);
+    user.addDevice(req.deviceInfo);
+
+    const rememberMe = false;
+    const expiresIn = parseInt(process.env.COOKIE_MAX_AGE_DEFAULT, 10) || 7 * 24 * 60 * 60 * 1000;
+    const sessionId = await user.createSession(req.deviceInfo, expiresIn);
+
+    await user.save();
+
+    // Create session in Session collection (normalized schema)
+    await Session.createSession(user._id, sessionId, req.deviceInfo, expiresIn);
+
+    const token = generateToken(
+      {
+        userId: user._id,
+        sessionId,
+        role: user.role
+      },
+      rememberMe
+    );
+
+    setTokenCookie(res, token, rememberMe);
+
+    user.addAuditLog('LOGIN_SUCCESS', {
+      sessionId,
+      loginMethod: 'facebook',
+      deviceTrusted: true,
+      rememberMe
+    }, req);
+
+    const redirectUrl = process.env.NODE_ENV === 'production' ? process.env.PROD_DASHBOARD_URL : process.env.DASHBOARD_URL;
+    res.redirect(redirectUrl);
+  })
+);
+
+// =============================================================================
+// FACEBOOK OAUTH ROUTES
+// =============================================================================
+
+/**
+ * @route   GET /api/auth/facebook
+ * @desc    Authenticate with Facebook
+ * @access  Public
+ */
+router.get('/facebook',
+  (req, res, next) => {
+  if (!(config.SOCIAL_LOGIN_ENABLED && config.FACEBOOK_AUTH_ENABLED)) {
+      return res.status(403).json(new ApiResponse({
+        success: false,
+        error: 'Facebook login is disabled',
+        message: 'Facebook login is currently disabled. Please try another login method.',
+        code: 'FACEBOOK_LOGIN_DISABLED'
+      }));
+    }
+    next();
+  },
+  passport.authenticate('facebook', { scope: ['email', 'public_profile'] })
+);
+
+/**
+ * @route   GET /api/auth/facebook/callback
+ * @desc    Facebook OAuth callback
+ * @access  Public
+ */
+router.get('/facebook/callback',
+  (req, res, next) => {
+  if (!(config.SOCIAL_LOGIN_ENABLED && config.FACEBOOK_AUTH_ENABLED)) {
+      return res.status(403).json(new ApiResponse({
+        success: false,
+        error: 'Facebook login is disabled',
+        message: 'Facebook login is currently disabled. Please try another login method.',
+        code: 'FACEBOOK_LOGIN_DISABLED'
+      }));
+    }
+    next();
+  },
+  passport.authenticate('facebook', { failureRedirect: '/login', session: false }),
+  asyncHandler(async (req, res) => {
+    const user = req.user;
+
+    if (!user) {
+      throw new ApiError('Facebook authentication failed', 401, 'FACEBOOK_AUTH_FAILED');
+    }
+
+    if (!req.deviceInfo || !req.deviceInfo.deviceId) {
+      console.warn('Device information missing during Facebook OAuth callback.');
+    }
+
+    user.updateLoginInfo(req.deviceInfo);
+    user.addDevice(req.deviceInfo);
+
+    const rememberMe = false;
+    const expiresIn = parseInt(process.env.COOKIE_MAX_AGE_DEFAULT, 10) || 7 * 24 * 60 * 60 * 1000;
+    const sessionId = await user.createSession(req.deviceInfo, expiresIn);
+
+    await user.save();
+
+    // Create session in Session collection (normalized schema)
+    await Session.createSession(user._id, sessionId, req.deviceInfo, expiresIn);
+
+    const token = generateToken(
+      {
+        userId: user._id,
+        sessionId,
+        role: user.role
+      },
+      rememberMe
+    );
+
+    setTokenCookie(res, token, rememberMe);
+
+    user.addAuditLog('LOGIN_SUCCESS', {
+      sessionId,
+      loginMethod: 'facebook',
+      deviceTrusted: true,
+      rememberMe
+    }, req);
+
+    const redirectUrl = process.env.NODE_ENV === 'production' ? process.env.PROD_DASHBOARD_URL : process.env.DASHBOARD_URL;
+    res.redirect(redirectUrl);
+  })
+);
+
+// =============================================================================
+// GITHUB OAUTH ROUTES
+// =============================================================================
+
+/**
+ * @route   GET /api/auth/github
+ * @desc    Authenticate with GitHub
+ * @access  Public
+ */
+router.get('/github',
+  (req, res, next) => {
+  if (!(config.SOCIAL_LOGIN_ENABLED && config.GITHUB_AUTH_ENABLED)) {
+      return res.status(403).json(new ApiResponse({
+        success: false,
+        error: 'GitHub login is disabled',
+        message: 'GitHub login is currently disabled. Please try another login method.',
+        code: 'GITHUB_LOGIN_DISABLED'
+      }));
+    }
+    next();
+  },
+  passport.authenticate('github', { scope: ['user:email'] })
+);
+
+/**
+ * @route   GET /api/auth/github/callback
+ * @desc    GitHub OAuth callback
+ * @access  Public
+ */
+router.get('/github/callback',
+  (req, res, next) => {
+  if (!(config.SOCIAL_LOGIN_ENABLED && config.GITHUB_AUTH_ENABLED)) {
+      return res.status(403).json(new ApiResponse({
+        success: false,
+        error: 'GitHub login is disabled',
+        message: 'GitHub login is currently disabled. Please try another login method.',
+        code: 'GITHUB_LOGIN_DISABLED'
+      }));
+    }
+    next();
+  },
+  passport.authenticate('github', { failureRedirect: '/login', session: false }),
+  asyncHandler(async (req, res) => {
+    const user = req.user;
+
+    if (!user) {
+      throw new ApiError('GitHub authentication failed', 401, 'GITHUB_AUTH_FAILED');
+    }
+
+    if (!req.deviceInfo || !req.deviceInfo.deviceId) {
+      console.warn('Device information missing during GitHub OAuth callback.');
+    }
+
+    user.updateLoginInfo(req.deviceInfo);
+    user.addDevice(req.deviceInfo);
+
+    const rememberMe = false;
+    const expiresIn = parseInt(process.env.COOKIE_MAX_AGE_DEFAULT, 10) || 7 * 24 * 60 * 60 * 1000;
+    const sessionId = await user.createSession(req.deviceInfo, expiresIn);
+
+    await user.save();
+
+    // Create session in Session collection (normalized schema)
+    await Session.createSession(user._id, sessionId, req.deviceInfo, expiresIn);
+
+    const token = generateToken(
+      {
+        userId: user._id,
+        sessionId,
+        role: user.role
+      },
+      rememberMe
+    );
+
+    setTokenCookie(res, token, rememberMe);
+
+    user.addAuditLog('LOGIN_SUCCESS', {
+      sessionId,
+      loginMethod: 'github',
+      deviceTrusted: true,
+      rememberMe
+    }, req);
+
+    const redirectUrl = process.env.NODE_ENV === 'production' ? process.env.PROD_DASHBOARD_URL : process.env.DASHBOARD_URL;
+    res.redirect(redirectUrl);
+  })
+);
+
+// =============================================================================
+// GITHUB OAUTH ROUTES
+// =============================================================================
+
+/**
+ * @route   GET /api/auth/github
+ * @desc    Authenticate with GitHub
+ * @access  Public
+ */
+router.get('/github',
+  (req, res, next) => {
+  if (!(config.SOCIAL_LOGIN_ENABLED && config.GITHUB_AUTH_ENABLED)) {
+      return res.status(403).json(new ApiResponse({
+        success: false,
+        error: 'GitHub login is disabled',
+        message: 'GitHub login is currently disabled. Please try another login method.',
+        code: 'GITHUB_LOGIN_DISABLED'
+      }));
+    }
+    next();
+  },
+  passport.authenticate('github', { scope: ['user:email'] })
+);
+
+/**
+ * @route   GET /api/auth/github/callback
+ * @desc    GitHub OAuth callback
+ * @access  Public
+ */
+router.get('/github/callback',
+  (req, res, next) => {
+  if (!(config.SOCIAL_LOGIN_ENABLED && config.GITHUB_AUTH_ENABLED)) {
+      return res.status(403).json(new ApiResponse({
+        success: false,
+        error: 'GitHub login is disabled',
+        message: 'GitHub login is currently disabled. Please try another login method.',
+        code: 'GITHUB_LOGIN_DISABLED'
+      }));
+    }
+    next();
+  },
+  passport.authenticate('github', { failureRedirect: '/login', session: false }),
+  asyncHandler(async (req, res) => {
+    const user = req.user;
+
+    if (!user) {
+      throw new ApiError('GitHub authentication failed', 401, 'GITHUB_AUTH_FAILED');
+    }
+
+    if (!req.deviceInfo || !req.deviceInfo.deviceId) {
+      console.warn('Device information missing during GitHub OAuth callback.');
+    }
+
+    user.updateLoginInfo(req.deviceInfo);
+    user.addDevice(req.deviceInfo);
+
+    const rememberMe = false;
+    const expiresIn = parseInt(process.env.COOKIE_MAX_AGE_DEFAULT, 10) || 7 * 24 * 60 * 60 * 1000;
+    const sessionId = await user.createSession(req.deviceInfo, expiresIn);
+
+    await user.save();
+
+    // Create session in Session collection (normalized schema)
+    await Session.createSession(user._id, sessionId, req.deviceInfo, expiresIn);
+
+    const token = generateToken(
+      {
+        userId: user._id,
+        sessionId,
+        role: user.role
+      },
+      rememberMe
+    );
+
+    setTokenCookie(res, token, rememberMe);
+
+    user.addAuditLog('LOGIN_SUCCESS', {
+      sessionId,
+      loginMethod: 'github',
+      deviceTrusted: true,
+      rememberMe
+    }, req);
+
+    const redirectUrl = process.env.NODE_ENV === 'production' ? process.env.PROD_DASHBOARD_URL : process.env.DASHBOARD_URL;
+    res.redirect(redirectUrl);
+  })
+);
+
+// =============================================================================
+// TWITTER OAUTH ROUTES
+// =============================================================================
+
+/**
+ * @route   GET /api/auth/twitter
+ * @desc    Authenticate with Twitter
+ * @access  Public
+ */
+router.get('/twitter',
+  (req, res, next) => {
+  if (!(config.SOCIAL_LOGIN_ENABLED && config.TWITTER_AUTH_ENABLED)) {
+      return res.status(403).json(new ApiResponse({
+        success: false,
+        error: 'Twitter login is disabled',
+        message: 'Twitter login is currently disabled. Please try another login method.',
+        code: 'TWITTER_LOGIN_DISABLED'
+      }));
+    }
+    next();
+  },
+  passport.authenticate('twitter')
+);
+
+/**
+ * @route   GET /api/auth/twitter/callback
+ * @desc    Twitter OAuth callback
+ * @access  Public
+ */
+router.get('/twitter/callback',
+  (req, res, next) => {
+  if (!(config.SOCIAL_LOGIN_ENABLED && config.TWITTER_AUTH_ENABLED)) {
+      return res.status(403).json(new ApiResponse({
+        success: false,
+        error: 'Twitter login is disabled',
+        message: 'Twitter login is currently disabled. Please try another login method.',
+        code: 'TWITTER_LOGIN_DISABLED'
+      }));
+    }
+    next();
+  },
+  passport.authenticate('twitter', { failureRedirect: '/login', session: false }),
+  asyncHandler(async (req, res) => {
+    const user = req.user;
+
+    if (!user) {
+      throw new ApiError('Twitter authentication failed', 401, 'TWITTER_AUTH_FAILED');
+    }
+
+    if (!req.deviceInfo || !req.deviceInfo.deviceId) {
+      console.warn('Device information missing during Twitter OAuth callback.');
+    }
+
+    user.updateLoginInfo(req.deviceInfo);
+    user.addDevice(req.deviceInfo);
+
+    const rememberMe = false;
+    const expiresIn = parseInt(process.env.COOKIE_MAX_AGE_DEFAULT, 10) || 7 * 24 * 60 * 60 * 1000;
+    const sessionId = await user.createSession(req.deviceInfo, expiresIn);
+
+    await user.save();
+
+    // Create session in Session collection (normalized schema)
+    await Session.createSession(user._id, sessionId, req.deviceInfo, expiresIn);
+
+    const token = generateToken(
+      {
+        userId: user._id,
+        sessionId,
+        role: user.role
+      },
+      rememberMe
+    );
+
+    setTokenCookie(res, token, rememberMe);
+
+    user.addAuditLog('LOGIN_SUCCESS', {
+      sessionId,
+      loginMethod: 'twitter',
+      deviceTrusted: true,
+      rememberMe
+    }, req);
+
+    const redirectUrl = process.env.NODE_ENV === 'production' ? process.env.PROD_DASHBOARD_URL : process.env.DASHBOARD_URL;
+    res.redirect(redirectUrl);
+  })
+);
+
+// =============================================================================
+// TWITTER OAUTH ROUTES
+// =============================================================================
+
+/**
+ * @route   GET /api/auth/twitter
+ * @desc    Authenticate with Twitter
+ * @access  Public
+ */
+router.get('/twitter',
+  (req, res, next) => {
+  if (!(config.SOCIAL_LOGIN_ENABLED && config.TWITTER_AUTH_ENABLED)) {
+      return res.status(403).json(new ApiResponse({
+        success: false,
+        error: 'Twitter login is disabled',
+        message: 'Twitter login is currently disabled. Please try another login method.',
+        code: 'TWITTER_LOGIN_DISABLED'
+      }));
+    }
+    next();
+  },
+  passport.authenticate('twitter')
+);
+
+/**
+ * @route   GET /api/auth/twitter/callback
+ * @desc    Twitter OAuth callback
+ * @access  Public
+ */
+router.get('/twitter/callback',
+  (req, res, next) => {
+  if (!(config.SOCIAL_LOGIN_ENABLED && config.TWITTER_AUTH_ENABLED)) {
+      return res.status(403).json(new ApiResponse({
+        success: false,
+        error: 'Twitter login is disabled',
+        message: 'Twitter login is currently disabled. Please try another login method.',
+        code: 'TWITTER_LOGIN_DISABLED'
+      }));
+    }
+    next();
+  },
+  passport.authenticate('twitter', { failureRedirect: '/login', session: false }),
+  asyncHandler(async (req, res) => {
+    const user = req.user;
+
+    if (!user) {
+      throw new ApiError('Twitter authentication failed', 401, 'TWITTER_AUTH_FAILED');
+    }
+
+    if (!req.deviceInfo || !req.deviceInfo.deviceId) {
+      console.warn('Device information missing during Twitter OAuth callback.');
+    }
+
+    user.updateLoginInfo(req.deviceInfo);
+    user.addDevice(req.deviceInfo);
+
+    const rememberMe = false;
+    const expiresIn = parseInt(process.env.COOKIE_MAX_AGE_DEFAULT, 10) || 7 * 24 * 60 * 60 * 1000;
+    const sessionId = await user.createSession(req.deviceInfo, expiresIn);
+
+    await user.save();
+
+    // Create session in Session collection (normalized schema)
+    await Session.createSession(user._id, sessionId, req.deviceInfo, expiresIn);
+
+    const token = generateToken(
+      {
+        userId: user._id,
+        sessionId,
+        role: user.role
+      },
+      rememberMe
+    );
+
+    setTokenCookie(res, token, rememberMe);
+
+    user.addAuditLog('LOGIN_SUCCESS', {
+      sessionId,
+      loginMethod: 'twitter',
+      deviceTrusted: true,
+      rememberMe
+    }, req);
+
+    const redirectUrl = process.env.NODE_ENV === 'production' ? process.env.PROD_DASHBOARD_URL : process.env.DASHBOARD_URL;
+    res.redirect(redirectUrl);
+  })
+);
+
+// =============================================================================
+// LINKEDIN OAUTH ROUTES
+// =============================================================================
+
+/**
+ * @route   GET /api/auth/linkedin
+ * @desc    Authenticate with LinkedIn
+ * @access  Public
+ */
+router.get('/linkedin',
+  (req, res, next) => {
+  if (!(config.SOCIAL_LOGIN_ENABLED && config.LINKEDIN_AUTH_ENABLED)) {
+      return res.status(403).json(new ApiResponse({
+        success: false,
+        error: 'LinkedIn login is disabled',
+        message: 'LinkedIn login is currently disabled. Please try another login method.',
+        code: 'LINKEDIN_LOGIN_DISABLED'
+      }));
+    }
+    next();
+  },
+  passport.authenticate('linkedin', { state: 'SOME_RANDOM_STATE' }) // 'state' is required by LinkedIn
+);
+
+/**
+ * @route   GET /api/auth/linkedin/callback
+ * @desc    LinkedIn OAuth callback
+ * @access  Public
+ */
+router.get('/linkedin/callback',
+  (req, res, next) => {
+  if (!(config.SOCIAL_LOGIN_ENABLED && config.LINKEDIN_AUTH_ENABLED)) {
+      return res.status(403).json(new ApiResponse({
+        success: false,
+        error: 'LinkedIn login is disabled',
+        message: 'LinkedIn login is currently disabled. Please try another login method.',
+        code: 'LINKEDIN_LOGIN_DISABLED'
+      }));
+    }
+    next();
+  },
+  passport.authenticate('linkedin', { failureRedirect: '/login', session: false }),
+  asyncHandler(async (req, res) => {
+    const user = req.user;
+
+    if (!user) {
+      throw new ApiError('LinkedIn authentication failed', 401, 'LINKEDIN_AUTH_FAILED');
+    }
+
+    if (!req.deviceInfo || !req.deviceInfo.deviceId) {
+      console.warn('Device information missing during LinkedIn OAuth callback.');
+    }
+
+    user.updateLoginInfo(req.deviceInfo);
+    user.addDevice(req.deviceInfo);
+
+    const rememberMe = false;
+    const expiresIn = parseInt(process.env.COOKIE_MAX_AGE_DEFAULT, 10) || 7 * 24 * 60 * 60 * 1000;
+    const sessionId = await user.createSession(req.deviceInfo, expiresIn);
+
+    await user.save();
+
+    // Create session in Session collection (normalized schema)
+    await Session.createSession(user._id, sessionId, req.deviceInfo, expiresIn);
+
+    const token = generateToken(
+      {
+        userId: user._id,
+        sessionId,
+        role: user.role
+      },
+      rememberMe
+    );
+
+    setTokenCookie(res, token, rememberMe);
+
+    user.addAuditLog('LOGIN_SUCCESS', {
+      sessionId,
+      loginMethod: 'linkedin',
+      deviceTrusted: true,
+      rememberMe
+    }, req);
+
+    const redirectUrl = process.env.NODE_ENV === 'production' ? process.env.PROD_DASHBOARD_URL : process.env.DASHBOARD_URL;
+    res.redirect(redirectUrl);
   })
 );
 
@@ -952,9 +1567,9 @@ router.post('/login',
     }
 
     // Find user by email or username
-    const user = await User.findByIdentifier(identifier);
+    let user = await User.findByIdentifier(identifier);
     if (!user) {
-      return res.status(401).json(new ApiResponse({
+      return res.status(401).json({
         success: false,
         error: 'Invalid credentials',
         message: 'The provided login credentials are incorrect',
@@ -962,7 +1577,7 @@ router.post('/login',
         data: {
           loginFailed: true
         }
-      }));
+      });
     }
 
     // Verify password
@@ -987,11 +1602,14 @@ router.post('/login',
       );
 
       if (typeof user.incrementFailedLogin === 'function') {
-        user.incrementFailedLogin();
+        user.incrementFailedLogin(
+          parseInt(process.env.AUTH_MAX_LOGIN_ATTEMPTS, 10) || 10,
+          parseInt(process.env.AUTH_ACCOUNT_LOCK_DURATION, 10) || 1800000
+        );
       }
       await user.save();
 
-      return res.status(401).json(new ApiResponse({
+      return res.status(401).json({
         success: false,
         error: 'Invalid credentials',
         message: 'The provided login credentials are incorrect',
@@ -1000,7 +1618,20 @@ router.post('/login',
           loginFailed: true,
           failedAttempts: user.failedLoginAttempts
         }
-      }));
+      });
+    }
+
+    // Check if email verification is required
+    if (config.FEATURE_REQUIRE_EMAIL_VERIFICATION && !user.isEmailVerified) {
+      return res.status(403).json({
+        success: false,
+        error: 'Email verification required',
+        message: 'You must verify your email address before you can log in. Please check your inbox for a verification email.',
+        code: 'EMAIL_NOT_VERIFIED',
+        data: {
+          requiresEmailVerification: true
+        }
+      });
     }
 
     // Check account status
@@ -1030,7 +1661,7 @@ router.post('/login',
         deviceInfo: req.deviceInfo
       }, req);
 
-      return res.status(423).json(new ApiResponse({
+      return res.status(423).json({
         success: false,
         error: 'Account is locked',
         message: `Your account is temporarily locked. Please try again in ${timeLeft} minutes`,
@@ -1040,13 +1671,13 @@ router.post('/login',
           timeLeftMinutes: timeLeft,
           lockExpiresAt: user.accountLockedUntil
         }
-      }));
+      });
     }
 
     // Check if device is trusted
-    const deviceTrusted = await isDeviceTrusted(user, req.deviceInfo);
+    const deviceTrusted = user.isDeviceTrusted(req.deviceInfo);
 
-    if (!deviceTrusted) {
+    if (!deviceTrusted && !shouldBypassDeviceVerification(user, req.deviceInfo)) {
       // Send device verification email
       await sendDeviceVerificationEmail(user, req.deviceInfo, req);
 
@@ -1132,66 +1763,94 @@ router.post('/login',
       }
 
       if (typeof user.addDevice === 'function') {
-        user.addDevice(req.deviceInfo);
+        const isNewDevice = user.addDevice(req.deviceInfo);
+        
+        // Send notification if this is a new device
+        if (isNewDevice && config.NEW_DEVICE_EMAIL_NOTIFICATION) {
+          await sendNewDeviceNotification(user, req.deviceInfo);
+          logDeviceAccess(user, req.deviceInfo, 'login', true);
+        }
       }
 
-      // Create session
-      const sessionId = user.createSession(req.deviceInfo, sessionDuration);
+      // Create session - just generate ID for now
+      let sessionId = await user.createSession(req.deviceInfo, sessionDuration);
 
       // Clear any temporary sessions
       if (user.tempSession) {
         user.clearTempSession();
       }
 
-      await user.save();
+      // Save with aggressive retry logic for version conflicts (concurrent logins)
+      // NOTE: With normalized schema, this should rarely need retries now
+      const maxRetries = 3; // Reduced from 10 since we removed session array
+      let retryCount = 0;
+      let saved = false;
 
-      // Generate JWT token
-      const token = jwt.sign(
-        {
-          userId: user._id.toString(),
-          sessionId,
-          role: user.role,
-          iat: Math.floor(Date.now() / 1000)
-        },
-        process.env.JWT_SECRET,
-        {
-          expiresIn: rememberMe ? '30d' : '7d',
-          issuer: process.env.JWT_ISSUER || 'authn',
-          audience: process.env.JWT_AUDIENCE || 'transitflow-users'
+      while (!saved && retryCount < maxRetries) {
+        try {
+          await user.save();
+          saved = true;
+        } catch (saveError) {
+          // Handle Mongoose version conflict error
+          if (saveError.name === 'VersionError' && retryCount < maxRetries - 1) {
+            retryCount++;
+            console.log(`VersionError on user.save() for ${user.email}, retry ${retryCount}/${maxRetries}`);
+            
+            // Exponential backoff with jitter: 100ms, 200ms, 400ms
+            const baseDelay = 100 * Math.pow(2, retryCount - 1);
+            const jitter = Math.random() * 50; // Add randomness to prevent thundering herd
+            await new Promise(resolve => setTimeout(resolve, baseDelay + jitter));
+            
+            // Reload the user document to get the latest version
+            const freshUser = await User.findById(user._id);
+            if (!freshUser) {
+              throw new Error('User document not found during retry');
+            }
+            
+            // Reapply the changes to the fresh document
+            freshUser.updateLoginInfo(req.deviceInfo);
+            freshUser.addDevice(req.deviceInfo);
+            sessionId = await freshUser.createSession(req.deviceInfo, sessionDuration);
+            if (freshUser.tempSession) {
+              freshUser.clearTempSession();
+            }
+            
+            // Update user reference for response
+            user = freshUser;
+            
+          } else {
+            // Not a version error or exceeded max retries
+            throw saveError;
+          }
         }
+      }
+
+      if (!saved) {
+        throw new Error('Failed to save user after maximum retries');
+      }
+
+      // NOW create the session in Session collection (after user save succeeds)
+      await Session.createSession(
+        user._id,
+        sessionId,
+        req.deviceInfo,
+        sessionDuration
       );
+      // Generate JWT token BEFORE adding audit log/notification
+      // This ensures the user gets logged in even if audit save fails
+      const tokenPayload = {
+        userId: user._id.toString(),
+        email: user.email,
+        username: user.username,
+        role: user.role,
+        sessionId
+      };
+      const token = generateToken(tokenPayload, rememberMe);
 
       // Set secure HTTP-only cookie
-      res.cookie('token', token, {
-        httpOnly: process.env.COOKIE_HTTP_ONLY === 'true',
-        secure: process.env.COOKIE_SECURE === 'true',
-        sameSite: process.env.COOKIE_SAME_SITE || (process.env.NODE_ENV === 'production' ? 'strict' : 'lax'),
-        maxAge: parseInt(process.env.COOKIE_MAX_AGE) || sessionDuration,
-        path: process.env.COOKIE_PATH || '/'
-      });
+      setTokenCookie(res, token, rememberMe);
 
-      // Audit log for successful login
-      user.addAuditLog('LOGIN_SUCCESS', {
-        sessionId,
-        rememberMe,
-        deviceInfo: req.deviceInfo,
-        sessionDuration: rememberMe ? '30 days' : '7 days',
-        deviceTrusted: true
-      }, req);
-
-      // Add welcome back notification
-      user.addNotification(
-        'info',
-        'Welcome Back!',
-        `You've successfully logged in from ${req.deviceInfo?.deviceName || 'your device'}`,
-        {
-          ipAddress: req.ip,
-          deviceInfo: req.deviceInfo,
-          timestamp: new Date(),
-          sessionId
-        }
-      );
-
+      // Prepare response data
       const responseData = {
         user: sanitizeUser(user),
         sessionId,
@@ -1201,19 +1860,52 @@ router.post('/login',
         deviceTrusted: true
       };
 
+      // Send response BEFORE audit log to avoid blocking the login
       res.status(200).json(new ApiResponse({
         success: true,
         message: 'Login successful',
         data: responseData
       }));
 
+      // Add audit log and notification AFTER response sent (fully async, non-blocking)
+      // This prevents audit logs from causing login failures
+      setImmediate(async () => {
+        try {
+          const auditUser = await User.findById(user._id);
+          if (auditUser) {
+            auditUser.addAuditLog('LOGIN_SUCCESS', {
+              sessionId,
+              rememberMe,
+              deviceInfo: req.deviceInfo,
+              sessionDuration: rememberMe ? '30 days' : '7 days',
+              deviceTrusted: true
+            }, req);
+
+            auditUser.addNotification(
+              'info',
+              'Welcome Back!',
+              `You've successfully logged in from ${req.deviceInfo?.deviceName || 'your device'}`,
+              {
+                ipAddress: req.ip,
+                deviceInfo: req.deviceInfo,
+                timestamp: new Date(),
+                sessionId
+              }
+            );
+
+            await auditUser.save();
+          }
+        } catch (auditError) {
+          // Log but don't fail - audit is not critical
+          console.error('Failed to save audit log/notification:', auditError.message);
+        }
+      });
+
     } catch (userUpdateError) {
       console.error('Login process error:', userUpdateError);
-      user.addAuditLog('LOGIN_ERROR', {
-        reason: 'User update failed',
-        error: userUpdateError.message,
-        deviceInfo: req.deviceInfo
-      }, req);
+      
+      // Skip audit log on error to avoid more version conflicts
+      // Audit logging is non-critical and shouldn't block error responses
 
       return res.status(500).json(new ApiResponse({
         success: false,
@@ -1320,7 +2012,7 @@ router.post('/verify-device',
 
     // Create login session
     const sessionDuration = 7 * 24 * 60 * 60 * 1000; // 7 days default
-    const sessionId = user.createSession(req.deviceInfo, sessionDuration);
+    const sessionId = await user.createSession(req.deviceInfo, sessionDuration);
 
     // Update login info
     user.updateLoginInfo(req.deviceInfo);
@@ -1344,29 +2036,15 @@ router.post('/verify-device',
     await user.save();
 
     // Generate JWT token
-    const jwtToken = jwt.sign(
-      {
-        userId: user._id.toString(),
-        sessionId,
-        role: user.role,
-        iat: Math.floor(Date.now() / 1000)
-      },
-      process.env.JWT_SECRET,
-      {
-        expiresIn: '7d',
-        issuer: process.env.JWT_ISSUER || 'transitflow',
-        audience: process.env.JWT_AUDIENCE || 'transitflow-users'
-      }
-    );
+    const jwtToken = generateToken({
+      userId: user._id.toString(),
+      sessionId,
+      role: user.role,
+      iat: Math.floor(Date.now() / 1000)
+    });
 
     // Set secure HTTP-only cookie
-    res.cookie('token', jwtToken, {
-      httpOnly: process.env.COOKIE_HTTP_ONLY === 'true',
-      secure: process.env.COOKIE_SECURE === 'true',
-      sameSite: process.env.COOKIE_SAME_SITE || (process.env.NODE_ENV === 'production' ? 'strict' : 'lax'),
-      maxAge: parseInt(process.env.COOKIE_MAX_AGE) || sessionDuration,
-      path: process.env.COOKIE_PATH || '/'
-    });
+    setTokenCookie(res, jwtToken);
 
     return res.json(new ApiResponse({
       success: true,
@@ -1475,7 +2153,11 @@ router.post('/verify-2fa',
     }
 
     // FIXED: Verify 2FA code with proper error handling
-    const verified = await user.verify2FACode(twoFactorCode);
+    const verified = await user.verify2FACode(
+      twoFactorCode,
+      parseInt(process.env.AUTH_MAX_2FA_ATTEMPTS, 10) || 5,
+      parseInt(process.env.AUTH_2FA_LOCK_DURATION, 10) || 900000
+    );
     
     if (!verified) {
       user.addAuditLog('TWO_FA_VERIFICATION_FAILED', {
@@ -1521,7 +2203,7 @@ router.post('/verify-2fa',
         user.addDevice(tempSession.deviceInfo);
       }
       
-      const sessionId = user.createSession(tempSession.deviceInfo, sessionDuration);
+      const sessionId = await user.createSession(tempSession.deviceInfo, sessionDuration);
 
       // Clear temporary session
       if (user.preferences?.tempSession && user.preferences.tempSession.tempSessionId === tempSessionId) {
@@ -1532,30 +2214,22 @@ router.post('/verify-2fa',
       // CRITICAL: Save all changes
       await user.save();
 
+      // Create session in Session collection (normalized schema)
+      await Session.createSession(user._id, sessionId, req.deviceInfo, sessionDuration);
+
       // Generate JWT token
-      const token = jwt.sign(
+      const token = generateToken(
         {
           userId: user._id.toString(),
           sessionId,
           role: user.role,
           iat: Math.floor(Date.now() / 1000)
         },
-        process.env.JWT_SECRET,
-        {
-          expiresIn: shouldRememberMe ? '30d' : '7d',
-          issuer: process.env.JWT_ISSUER || 'transitflow',
-          audience: process.env.JWT_AUDIENCE || 'transitflow-users'
-        }
+        shouldRememberMe
       );
 
       // Set secure HTTP-only cookie
-      res.cookie('token', token, {
-        httpOnly: process.env.COOKIE_HTTP_ONLY === 'true',
-        secure: process.env.COOKIE_SECURE === 'true',
-        sameSite: process.env.COOKIE_SAME_SITE || (process.env.NODE_ENV === 'production' ? 'strict' : 'lax'),
-        maxAge: parseInt(process.env.COOKIE_MAX_AGE) || sessionDuration,
-        path: process.env.COOKIE_PATH || '/'
-      });
+      setTokenCookie(res, token, shouldRememberMe);
 
       user.addAuditLog('LOGIN_SUCCESS_2FA', {
         sessionId,
@@ -1615,6 +2289,17 @@ router.post('/verify-2fa',
  * @access  Public
  */
 router.post('/verify-email',
+  (req, res, next) => {
+    if (!config.FEATURE_EMAIL_VERIFICATION_ENABLED) {
+      return res.status(403).json(new ApiResponse({
+        success: false,
+        error: 'Email verification is disabled',
+        message: 'Email verification is currently disabled. Please contact support for assistance.',
+        code: 'EMAIL_VERIFICATION_DISABLED'
+      }));
+    }
+    next();
+  },
   emailVerificationLimiter,
   ipRateLimit(10, 15 * 60 * 1000),
   [
@@ -1695,26 +2380,16 @@ router.post('/verify-email',
 
       // Create session for already verified user on trusted device
       const sessionDuration = 7 * 24 * 60 * 60 * 1000;
-      const sessionId = user.createSession(req.deviceInfo, sessionDuration);
+      const sessionId = await user.createSession(req.deviceInfo, sessionDuration);
 
-      const token = jwt.sign(
-        {
-          userId: user._id.toString(),
-          sessionId,
-          role: user.role,
-          iat: Math.floor(Date.now() / 1000)
-        },
-        process.env.JWT_SECRET,
-        { expiresIn: '7d' }
-      );
-
-      res.cookie('token', token, {
-        httpOnly: process.env.COOKIE_HTTP_ONLY === 'true',
-        secure: process.env.COOKIE_SECURE === 'true',
-        sameSite: process.env.COOKIE_SAME_SITE || (process.env.NODE_ENV === 'production' ? 'strict' : 'lax'),
-        maxAge: parseInt(process.env.COOKIE_MAX_AGE) || sessionDuration,
-        path: process.env.COOKIE_PATH || '/'
+      const token = generateToken({
+        userId: user._id.toString(),
+        sessionId,
+        role: user.role,
+        iat: Math.floor(Date.now() / 1000)
       });
+
+      setTokenCookie(res, token);
 
       return res.json(new ApiResponse({
         success: true,
@@ -1762,7 +2437,7 @@ router.post('/verify-email',
     await markDeviceAsTrusted(user, req.deviceInfo, false);
 
     const sessionDuration = 7 * 24 * 60 * 60 * 1000;
-    const sessionId = user.createSession(req.deviceInfo, sessionDuration);
+    const sessionId = await user.createSession(req.deviceInfo, sessionDuration);
 
     user.updateLoginInfo(req.deviceInfo);
 
@@ -1785,25 +2460,15 @@ router.post('/verify-email',
     await user.save();
 
     // Generate JWT token
-    const token = jwt.sign(
-      {
-        userId: user._id.toString(),
-        sessionId,
-        role: user.role,
-        iat: Math.floor(Date.now() / 1000)
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    const token = generateToken({
+      userId: user._id.toString(),
+      sessionId,
+      role: user.role,
+      iat: Math.floor(Date.now() / 1000)
+    });
 
     // Set secure HTTP-only cookie
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-      maxAge: sessionDuration,
-      path: '/'
-    });
+    setTokenCookie(res, token);
 
     // Send welcome email
     try {
@@ -1842,6 +2507,17 @@ router.post('/verify-email',
  * @access  Public
  */
 router.post('/resend-verification',
+  (req, res, next) => {
+    if (!config.FEATURE_EMAIL_VERIFICATION_ENABLED) {
+      return res.status(403).json(new ApiResponse({
+        success: false,
+        error: 'Email verification is disabled',
+        message: 'Email verification is currently disabled. Please contact support for assistance.',
+        code: 'EMAIL_VERIFICATION_DISABLED'
+      }));
+    }
+    next();
+  },
   emailVerificationLimiter,
   ipRateLimit(5, 15 * 60 * 1000),
   [
@@ -1989,6 +2665,17 @@ router.post('/resend-verification',
  * @access  Public
  */
 router.post('/forgot-password',
+  (req, res, next) => {
+    if (!config.FEATURE_PASSWORD_RESET_ENABLED) {
+      return res.status(403).json(new ApiResponse({
+        success: false,
+        error: 'Password reset is disabled',
+        message: 'Password reset is currently disabled. Please contact support for assistance.',
+        code: 'PASSWORD_RESET_DISABLED'
+      }));
+    }
+    next();
+  },
   passwordResetLimiter,
   ipRateLimit(5, 60 * 60 * 1000), // 5 per hour per IP
   [body('email').isEmail().normalizeEmail().withMessage('Valid email is required')],
@@ -1998,6 +2685,30 @@ router.post('/forgot-password',
     const { email } = req.body;
 
     const user = await User.findByEmail(email);
+
+    if (user) {
+      const resetToken = user.generatePasswordResetToken(
+        parseInt(process.env.PASSWORD_RESET_EXPIRY, 10) || 1800000
+      );
+      await user.save();
+
+      const resetUrl = `${process.env.NODE_ENV === 'production' ? process.env.PROD_FRONTEND_URL : process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+
+      try {
+        await sendEmail({
+          to: user.email,
+          subject: 'Password Reset Request',
+          template: 'password-reset',
+          data: {
+            name: user.fullName || user.username,
+            resetUrl,
+            expiresIn: `${(parseInt(process.env.PASSWORD_RESET_EXPIRY, 10) || 1800000) / 60000} minutes`
+          }
+        });
+      } catch (emailError) {
+        console.error('Password reset email error:', emailError);
+      }
+    }
 
     // Always return success to prevent enumeration
     if (!user || user.isDeleted || !user.isActive) {

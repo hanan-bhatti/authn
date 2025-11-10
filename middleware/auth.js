@@ -4,6 +4,7 @@ const UAParser = require('ua-parser-js');
 const geoip = require('geoip-lite');
 
 const User = require('../models/User');
+const Session = require('../models/Session');
 const { ApiError, ApiResponse, asyncHandler } = require('../utils/helpers');
 
 /**
@@ -233,10 +234,37 @@ const authenticateToken = asyncHandler(async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // Try to get redis service for caching
+    let redisService = null;
+    try {
+      redisService = require('../services/redis');
+    } catch (err) {
+      // Redis not available, continue without cache
+    }
+
+    // Try cache first (JWT verification is CPU-intensive with bcrypt-level cost)
+    if (redisService && redisService.isConnected()) {
+      const cachedAuth = await redisService.get(`jwt:${token.substring(0, 32)}`);
+      if (cachedAuth) {
+        const authData = JSON.parse(cachedAuth);
+        req.user = authData;
+        return next();
+      }
+    }
+
+    const algorithm = process.env.JWT_ALGORITHM || 'HS256';
+    const secretOrPublicKey = algorithm.startsWith('RS') 
+      ? process.env.JWT_PUBLIC_KEY 
+      : process.env.JWT_SECRET;
+
+    const decoded = jwt.verify(token, secretOrPublicKey, {
+      algorithms: [algorithm],
+      issuer: process.env.JWT_ISSUER,
+      audience: process.env.JWT_AUDIENCE,
+    });
 
     const user = await User.findById(decoded.userId).select(
-      'isActive isDeleted sessions role permissions accountLockedUntil failedLoginAttempts'
+      'isActive isDeleted role permissions accountLockedUntil failedLoginAttempts'
     );
 
     if (!user) {
@@ -253,37 +281,36 @@ const authenticateToken = asyncHandler(async (req, res, next) => {
     }
 
     if (decoded.sessionId) {
-      const session = user.sessions.find(s =>
-        s.sessionId === decoded.sessionId &&
-        s.isActive &&
-        s.expiresAt > new Date()
-      );
+      // Validate session from Session collection (normalized)
+      const session = await Session.findBySessionId(decoded.sessionId);
 
-      if (!session) {
+      if (!session || session.userId.toString() !== user._id.toString()) {
         throw new ApiError('Invalid or expired session', 401);
       }
 
-      session.lastActivity = new Date();
-      if (session.device) {
-        session.device.lastUsed = new Date();
-      } else {
-        session.device = {
-          deviceId: 'unknown',
-          deviceName: 'Unknown Device',
-          lastUsed: new Date()
-        };
-      }
-
-      await user.save();
+      // Update session last activity
+      await Session.updateActivity(decoded.sessionId);
+      // No need to save user document anymore!
     }
 
-    req.user = {
+    const authData = {
       userId: decoded.userId,
       sessionId: decoded.sessionId,
       role: user.role,
       permissions: user.permissions || [],
       authMethod: 'jwt'
     };
+
+    req.user = authData;
+
+    // Cache the auth result for 5 minutes (balance between freshness and performance)
+    if (redisService && redisService.isConnected()) {
+      await redisService.setex(
+        `jwt:${token.substring(0, 32)}`, 
+        300, // 5 minutes
+        JSON.stringify(authData)
+      );
+    }
 
     next();
   } catch (error) {
@@ -504,6 +531,11 @@ const userRateLimit = (maxRequests = 100, windowMs = 15 * 60 * 1000) => {
   const requests = new Map();
 
   return asyncHandler(async (req, res, next) => {
+    // Skip rate limiting if disabled in development
+    if (process.env.DEV_DISABLE_RATE_LIMITING === 'true') {
+      return next();
+    }
+
     if (!req.user) {
       return next();
     }
@@ -568,6 +600,11 @@ const ipRateLimit = (maxRequests = 100, windowMs = 15 * 60 * 1000) => {
   const requests = new Map();
 
   return (req, res, next) => {
+    // Skip rate limiting if disabled in development
+    if (process.env.DEV_DISABLE_RATE_LIMITING === 'true') {
+      return next();
+    }
+
     const ip = req.ip || req.connection?.remoteAddress || 'unknown';
     const now = Date.now();
     const windowStart = Math.floor(now / windowMs) * windowMs;
@@ -623,17 +660,17 @@ const checkAccountLock = asyncHandler(async (req, res, next) => {
 
     if (user && user.accountLockedUntil && user.accountLockedUntil > Date.now()) {
       const timeLeft = Math.ceil((user.accountLockedUntil - Date.now()) / (1000 * 60));
-      return res.status(423).json(new ApiResponse({
+      return res.status(423).json({
         success: false,
         error: 'Account is locked',
         message: `Account is locked. Try again in ${timeLeft} minutes.`,
         code: 'ACCOUNT_LOCKED',
         data: {
-          lockedUntil: user.accountLockedUntil,
-          attemptsRemaining: Math.max(0, parseInt(process.env.AUTH_MAX_LOGIN_ATTEMPTS || '5') - user.failedLoginAttempts),
+          accountLocked: true,
+          lockExpiresAt: user.accountLockedUntil,
           timeLeftMinutes: timeLeft
         }
-      }));
+      });
     }
   }
   next();
@@ -661,13 +698,10 @@ const validateSession = asyncHandler(async (req, res, next) => {
     }));
   }
 
-  const session = user.sessions.find(s =>
-    s.sessionId === req.user.sessionId &&
-    s.isActive &&
-    s.expiresAt > new Date()
-  );
+  // Validate session from Session collection (normalized)
+  const session = await Session.findBySessionId(req.user.sessionId);
 
-  if (!session) {
+  if (!session || session.userId.toString() !== user._id.toString()) {
     return res.status(400).json(new ApiResponse({
       success: false,
       error: 'Invalid session',
@@ -681,17 +715,20 @@ const validateSession = asyncHandler(async (req, res, next) => {
   }
 
   // Update session activity with device info if available
-  session.lastActivity = new Date();
-  if (req.deviceInfo) {
-    session.device = {
-      ...session.device,
-      lastUsed: new Date(),
-      ipAddress: req.deviceInfo.ipAddress,
-      location: req.deviceInfo.location
-    };
+  const sessionActivityTimeout = parseInt(process.env.SESSION_ACTIVITY_TIMEOUT || '0', 10);
+  if (sessionActivityTimeout > 0) {
+    const lastActivityTime = new Date(session.lastActivity).getTime();
+    const currentTime = new Date().getTime();
+    if (currentTime - lastActivityTime > sessionActivityTimeout) {
+      // Mark session as inactive
+      await Session.invalidateSession(req.user.sessionId);
+      throw new ApiError('Session expired due to inactivity', 401, 'SESSION_INACTIVE');
+    }
   }
 
-  await user.save();
+  // Update session activity
+  await Session.updateActivity(req.user.sessionId, req.deviceInfo);
+  // No need to save user document anymore!
   next();
 });
 

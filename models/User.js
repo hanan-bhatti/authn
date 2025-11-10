@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { timeUtils } = require('../utils/helpers');
+const config = require('../utils/config');
+const redisService = require('../services/redis');
 
 const deviceSchema = new mongoose.Schema({
   deviceId: { type: String, required: true },
@@ -246,16 +248,16 @@ const userSchema = new mongoose.Schema({
   },
   permissions: [String],
   socialAccounts: [socialAccountSchema],
-  sessions: [sessionSchema],
+  // sessions: Moved to Session collection (models/Session.js)
+  // auditLogs: Moved to AuditLog collection (models/AuditLog.js)
+  // notifications: Moved to Notification collection (models/Notification.js)
   trustedDevices: [deviceSchema],
   pendingDeviceVerifications: [pendingDeviceVerificationSchema],
   apiKeys: [apiKeySchema],
-  auditLogs: [auditLogSchema],
-  notifications: [notificationSchema],
   analytics: { type: analyticsSchema, default: () => ({}) },
   preferences: {
-    language: { type: String, default: 'en' },
-    timezone: { type: String, default: 'UTC' },
+    language: { type: String, default: process.env.DEFAULT_LANGUAGE || 'en' },
+    timezone: { type: String, default: process.env.DEFAULT_TIMEZONE || 'UTC' },
     theme: { type: String, enum: ['light', 'dark', 'auto'], default: 'auto' },
     notifications: {
       email: {
@@ -322,7 +324,7 @@ userSchema.index({ email: 1 });
 userSchema.index({ username: 1 });
 userSchema.index({ phone: 1 }, { sparse: true });
 
-userSchema.index({ 'sessions.sessionId': 1 }, { sparse: true });
+// Removed: sessions index (now in Session collection)
 userSchema.index({ 'socialAccounts.provider': 1, 'socialAccounts.providerId': 1 });
 userSchema.index({ deletionToken: 1 }, { sparse: true });
 userSchema.index({ deletionTokenExpires: 1 }, { sparse: true });
@@ -645,7 +647,7 @@ userSchema.pre('save', async function (next) {
   if (!this.isModified('passwordHash')) return next();
 
   if (this.passwordHash) {
-    const salt = await bcrypt.genSalt(12);
+    const salt = await bcrypt.genSalt(parseInt(process.env.BCRYPT_ROUNDS) || 12);
     this.passwordHash = await bcrypt.hash(this.passwordHash, salt);
   }
   next();
@@ -657,32 +659,11 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.passwordHash);
 };
 
-userSchema.pre('save', async function (next) {
-  // Only hash if password is modified AND not already hashed
-  if (!this.isModified('passwordHash')) return next();
-
-  if (this.passwordHash) {
-    // Check if it's already a bcrypt hash
-    if (this.passwordHash.startsWith('$2a$') || 
-        this.passwordHash.startsWith('$2b$') || 
-        this.passwordHash.startsWith('$2y$')) {
-      console.log('Password already appears to be hashed, skipping hash operation');
-      return next();
-    }
-
-    console.log('Hashing new password...');
-    const salt = await bcrypt.genSalt(parseInt(process.env.BCRYPT_ROUNDS) || 12);
-    this.passwordHash = await bcrypt.hash(this.passwordHash, salt);
-    console.log('Password hashed successfully');
-  }
-  next();
-});
-
 // Generate email verification OTP
 userSchema.methods.generateEmailVerificationOTP = function () {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   this.emailVerificationOTP = crypto.createHash('sha256').update(otp).digest('hex');
-  this.emailVerificationExpires = timeUtils.addTime(new Date(), 10, 'minutes');
+  this.emailVerificationExpires = new Date(Date.now() + parseInt(process.env.EMAIL_VERIFICATION_EXPIRY || '600000', 10)); // Default to 10 minutes
   return otp;
 };
 
@@ -703,7 +684,7 @@ userSchema.methods.verifyEmailOTP = function (otp) {
 userSchema.methods.generatePasswordResetToken = function () {
   const resetToken = crypto.randomBytes(32).toString('hex');
   this.passwordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-  this.passwordResetExpires = timeUtils.addTime(new Date(), 30, 'minutes');
+  this.passwordResetExpires = new Date(Date.now() + parseInt(process.env.PASSWORD_RESET_EXPIRY || '1800000', 10)); // Default to 30 minutes
   return resetToken;
 };
 
@@ -711,9 +692,12 @@ userSchema.methods.incrementFailedLogin = function () {
   this.failedLoginAttempts = (this.failedLoginAttempts || 0) + 1;
   this.lastFailedLogin = new Date();
 
-  // Lock account after 10 failed attempts
-  if (this.failedLoginAttempts >= 10) {
-    this.accountLockedUntil = timeUtils.addTime(new Date(), 30, 'minutes');
+  const maxAttempts = parseInt(process.env.AUTH_MAX_LOGIN_ATTEMPTS || '10', 10);
+  const lockDuration = parseInt(process.env.AUTH_ACCOUNT_LOCK_DURATION || '1800000', 10); // 30 minutes
+
+  // Lock account after max failed attempts
+  if (this.failedLoginAttempts >= maxAttempts) {
+    this.accountLockedUntil = new Date(Date.now() + lockDuration);
     this.lockReason = 'too_many_failed_attempts';
   }
   
@@ -877,16 +861,19 @@ userSchema.methods.incrementFailed2FA = function () {
     this.twoFactorAuth = {
       isEnabled: false,
       failedAttempts: 0,
-      maxAttempts: 5
+      maxAttempts: parseInt(process.env.AUTH_MAX_2FA_ATTEMPTS || '5', 10)
     };
   }
   
   this.twoFactorAuth.failedAttempts = (this.twoFactorAuth.failedAttempts || 0) + 1;
   this.twoFactorAuth.lastFailedAttempt = new Date();
   
+  const maxAttempts = parseInt(process.env.AUTH_MAX_2FA_ATTEMPTS || '5', 10);
+  const lockDuration = parseInt(process.env.AUTH_2FA_LOCK_DURATION || '900000', 10); // 15 minutes
+
   // Lock 2FA after max attempts
-  if (this.twoFactorAuth.failedAttempts >= (this.twoFactorAuth.maxAttempts || 5)) {
-    this.twoFactorAuth.lockedUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+  if (this.twoFactorAuth.failedAttempts >= maxAttempts) {
+    this.twoFactorAuth.lockedUntil = new Date(Date.now() + lockDuration);
   }
   
   console.log(`2FA failed attempts incremented to: ${this.twoFactorAuth.failedAttempts}`);
@@ -902,69 +889,33 @@ userSchema.methods.resetFailed2FA = function () {
   }
 };
 
-userSchema.methods.createSession = function(deviceInfo, expiresIn = 7 * 24 * 60 * 60 * 1000) {
+userSchema.methods.createSession = async function(deviceInfo, expiresIn = 7 * 24 * 60 * 60 * 1000) {
   // Generate a more unique sessionId using timestamp and random bytes
   const timestamp = Date.now().toString(36);
   const randomBytes = crypto.randomBytes(16).toString('hex');
   const sessionId = `${timestamp}_${randomBytes}`;
 
-  const expiresAt = new Date(Date.now() + expiresIn);
-
-  // Ensure sessions array exists
-  if (!this.sessions) {
-    this.sessions = [];
-  }
-
-  const newSession = {
-    sessionId,
-    device: deviceInfo,
-    expiresAt,
-    isActive: true,
-    createdAt: new Date(),
-    lastActivity: new Date()
-  };
-
-  this.sessions.push(newSession);
-
-  // Clean up old sessions (keep only last 5)
-  this.sessions = this.sessions
-    .sort((a, b) => b.createdAt - a.createdAt)
-    .slice(0, 5);
-
   console.log(`Created new session ${sessionId} for user ${this._id}`);
-  this.markModified('sessions');
   
+  // Session will be created in Session collection by auth routes
+  // This method now just returns the sessionId
   return sessionId;
 };
 
-userSchema.methods.revokeSession = function (sessionId) {
-  if (!this.sessions) return;
-
-  const session = this.sessions.find(s => s.sessionId === sessionId);
-  if (session) {
-    session.isActive = false;
-  }
+userSchema.methods.revokeSession = async function (sessionId) {
+  // Session revocation handled by Session.invalidateSession()
+  // This method is now a no-op, kept for backwards compatibility
+  const Session = mongoose.model('Session');
+  await Session.invalidateSession(sessionId);
 };
 
-userSchema.methods.revokeAllSessions = function() {
+userSchema.methods.revokeAllSessions = async function() {
   console.log(`Revoking all sessions for user ${this._id}`);
   
-  if (this.sessions && this.sessions.length > 0) {
-    let revokedCount = 0;
-    this.sessions.forEach(session => {
-      if (session.isActive) {
-        session.isActive = false;
-        session.revokedAt = new Date();
-        revokedCount++;
-      }
-    });
-    console.log(`Revoked ${revokedCount} active sessions`);
-  } else {
-    console.log('No sessions found to revoke');
-  }
-  
-  // Mark the field as modified to ensure it saves
-  this.markModified('sessions');
+  // Session revocation handled by Session.invalidateAllUserSessions()
+  const Session = mongoose.model('Session');
+  const count = await Session.invalidateAllUserSessions(this._id);
+  console.log(`Revoked ${count} active sessions`);
 };
 
 userSchema.methods.addDevice = function (deviceInfo) {
@@ -978,6 +929,7 @@ userSchema.methods.addDevice = function (deviceInfo) {
     existingDevice.lastUsed = new Date();
     existingDevice.ipAddress = deviceInfo.ipAddress;
     existingDevice.location = deviceInfo.location;
+    return false; // Not a new device
   } else {
     this.trustedDevices.push({
       ...deviceInfo,
@@ -999,8 +951,25 @@ userSchema.methods.addDevice = function (deviceInfo) {
 
     this.trustedDevices = this.trustedDevices
       .sort((a, b) => b.lastUsed - a.lastUsed)
-      .slice(0, 10);
+      .slice(0, parseInt(process.env.MAX_TRUSTED_DEVICES || '10', 10));
+    
+    return true; // New device added
   }
+};
+
+/**
+ * Check if a device is trusted
+ * @param {Object} deviceInfo - Device information object
+ * @returns {boolean} - True if device is trusted
+ */
+userSchema.methods.isDeviceTrusted = function(deviceInfo) {
+  if (!this.trustedDevices || !Array.isArray(this.trustedDevices)) {
+    return false;
+  }
+  
+  // Check if device exists and is trusted
+  const device = this.trustedDevices.find(d => d.deviceId === deviceInfo.deviceId);
+  return device && device.trusted !== false;
 };
 
 userSchema.methods.generateDeviceVerificationToken = function(deviceInfo) {
@@ -1022,7 +991,7 @@ userSchema.methods.generateDeviceVerificationToken = function(deviceInfo) {
     token: hashedToken,
     deviceId: deviceInfo.deviceId,
     deviceInfo: deviceInfo,
-    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
+    expiresAt: new Date(Date.now() + parseInt(process.env.DEVICE_VERIFICATION_EXPIRY || '86400000', 10)) // Default to 24 hours
   });
   
   return token; // Return the plain token for email
@@ -1047,55 +1016,48 @@ userSchema.methods.isSocialUser = function () {
 };
 
 // Audit logging
-userSchema.methods.addAuditLog = function (action, details = {}, req = {}) {
-  // Ensure auditLogs array exists
-  if (!this.auditLogs) {
-    this.auditLogs = [];
+userSchema.methods.addAuditLog = async function (action, details = {}, req = {}) {
+  if (!config.FEATURE_AUDIT_LOGS_ENABLED) {
+    return;
   }
-
-  this.auditLogs.push({
+  
+  // AuditLog entries now stored in separate collection via AuditLog.log()
+  const AuditLog = mongoose.model('AuditLog');
+  
+  await AuditLog.log(
+    this._id,
     action,
-    details,
-    ipAddress: req.ip || req.connection?.remoteAddress,
-    userAgent: req.get?.('User-Agent')
-  });
-
-  // Keep only last 50 audit logs
-  this.auditLogs = this.auditLogs
-    .sort((a, b) => b.timestamp - a.timestamp)
-    .slice(0, 50);
+    {
+      ...details,
+      ipAddress: req.ip || req.connection?.remoteAddress,
+      userAgent: req.get?.('User-Agent'),
+      deviceInfo: req.deviceInfo
+    }
+  );
 };
 
 // Notification management
-userSchema.methods.addNotification = function (type, title, message, data = {}) {
-  // Ensure notifications array exists
-  if (!this.notifications) {
-    this.notifications = [];
+userSchema.methods.addNotification = async function (type, title, message, data = {}) {
+  if (!config.FEATURE_NOTIFICATIONS_ENABLED) {
+    return;
   }
-
-  this.notifications.unshift({
-    type,
-    title,
-    message,
-    data
-  });
-
-  // Keep only last 20 notifications
-  this.notifications = this.notifications.slice(0, 20);
+  
+  // Notifications now stored in separate collection via Notification.createNotification()
+  const Notification = mongoose.model('Notification');
+  
+  await Notification.createNotification(this._id, type, title, message, data);
 };
 
-userSchema.methods.markNotificationAsRead = function (notificationId) {
-  if (!this.notifications) return;
-
-  const notification = this.notifications.find(n => n.id === notificationId);
-  if (notification) {
-    notification.read = true;
-  }
+userSchema.methods.markNotificationAsRead = async function (notificationId) {
+  // Notification updates now handled by Notification.markAsRead()
+  const Notification = mongoose.model('Notification');
+  await Notification.markAsRead(notificationId);
 };
 
-userSchema.methods.getUnreadNotificationsCount = function () {
-  if (!this.notifications) return 0;
-  return this.notifications.filter(n => !n.read).length;
+userSchema.methods.getUnreadNotificationsCount = async function () {
+  // Unread count now retrieved from Notification collection
+  const Notification = mongoose.model('Notification');
+  return await Notification.getUnreadCount(this._id);
 };
 
 // API Key management
@@ -1172,14 +1134,43 @@ userSchema.methods.exportData = function () {
 };
 
 // Static methods
-userSchema.statics.findByIdentifier = function (identifier) {
-  return this.findOne({
+userSchema.statics.findByIdentifier = async function (identifier) {
+  const normalizedIdentifier = identifier.toLowerCase();
+  
+  // Try Redis cache first (key by identifier)
+  const cacheKey = `user:identifier:${normalizedIdentifier}`;
+  try {
+    const cached = await redisService.client.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached); // Return plain object (faster)
+    }
+  } catch (err) {
+    getLogger().warn('Redis cache lookup failed for identifier:', err.message);
+  }
+  
+  // Cache miss - query MongoDB with lean() for faster read-only query
+  const user = await this.findOne({
     $or: [
-      { email: identifier.toLowerCase() },
-      { username: identifier.toLowerCase() }
+      { email: normalizedIdentifier },
+      { username: normalizedIdentifier }
     ],
     isDeleted: false
-  });
+  })
+  .select('+password') // Include password for authentication
+  .lean(); // 30% faster for read-only operations
+  
+  // Cache the result if found (TTL: 1 hour)
+  if (user) {
+    try {
+      await redisService.client.setEx(cacheKey, config.REDIS_USER_TTL || 3600, JSON.stringify(user));
+      // Also cache by user ID for consistency
+      await redisService.cacheUser(user._id.toString(), user, config.REDIS_USER_TTL || 3600);
+    } catch (err) {
+      getLogger().warn('Redis cache store failed:', err.message);
+    }
+  }
+  
+  return user;
 };
 
 userSchema.statics.findByEmail = function (email) {
@@ -1203,6 +1194,86 @@ userSchema.statics.findBySocialAccount = function (provider, providerId) {
     isDeleted: false
   });
 };
+
+/**
+ * Find user by ID with Redis caching
+ * @param {ObjectId} userId - User ID
+ * @param {Object} options - Query options
+ * @returns {Promise<User|null>}
+ */
+userSchema.statics.findByIdCached = async function(userId, options = {}) {
+  // Try Redis cache first
+  const cached = await redisService.getUser(userId.toString());
+  if (cached) {
+    return cached; // Return plain object (faster, no Mongoose overhead)
+  }
+
+  // Cache miss - query MongoDB with lean() for better performance
+  const query = this.findById(userId);
+  
+  if (options.select) {
+    query.select(options.select);
+  }
+  
+  const user = await query.lean(); // 30% faster read-only queries
+  
+  if (user) {
+    // Cache for next request (1 hour TTL)
+    await redisService.cacheUser(userId.toString(), user, config.REDIS_USER_TTL);
+  }
+  
+  return user;
+};
+
+/**
+ * Middleware: Invalidate user cache on save
+ */
+userSchema.post('save', async function(doc) {
+  // Invalidate user ID cache
+  await redisService.invalidateUser(doc._id.toString());
+  
+  // Invalidate identifier-based cache keys
+  if (doc.email) {
+    try {
+      await redisService.client.del(`user:identifier:${doc.email.toLowerCase()}`);
+    } catch (err) {
+      getLogger().warn('Failed to invalidate email identifier cache:', err.message);
+    }
+  }
+  if (doc.username) {
+    try {
+      await redisService.client.del(`user:identifier:${doc.username.toLowerCase()}`);
+    } catch (err) {
+      getLogger().warn('Failed to invalidate username identifier cache:', err.message);
+    }
+  }
+});
+
+/**
+ * Middleware: Invalidate user cache on update
+ */
+userSchema.post('findOneAndUpdate', async function(doc) {
+  if (doc) {
+    // Invalidate user ID cache
+    await redisService.invalidateUser(doc._id.toString());
+    
+    // Invalidate identifier-based cache keys
+    if (doc.email) {
+      try {
+        await redisService.client.del(`user:identifier:${doc.email.toLowerCase()}`);
+      } catch (err) {
+        getLogger().warn('Failed to invalidate email identifier cache:', err.message);
+      }
+    }
+    if (doc.username) {
+      try {
+        await redisService.client.del(`user:identifier:${doc.username.toLowerCase()}`);
+      } catch (err) {
+        getLogger().warn('Failed to invalidate username identifier cache:', err.message);
+      }
+    }
+  }
+});
 
 userSchema.statics.UserBackup = UserBackup;
 

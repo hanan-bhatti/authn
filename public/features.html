@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Features & Capabilities</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --secondary: #8b5cf6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --bg-tertiary: #e9ecef;
+            --text-primary: #1a1a1a;
+            --text-secondary: #6b7280;
+            --border: #e5e7eb;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            --radius-sm: 6px;
+            --radius: 8px;
+            --radius-lg: 12px;
+            --spacing-sm: 6px;
+            --spacing-md: 8px;
+            --spacing-lg: 12px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                --bg-primary: #1a1a1a;
+                --bg-secondary: #2d2d2d;
+                --bg-tertiary: #3d3d3d;
+                --text-primary: #ffffff;
+                --text-secondary: #9ca3af;
+                --border: #404040;
+            }
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --bg-tertiary: #3d3d3d;
+            --text-primary: #ffffff;
+            --text-secondary: #9ca3af;
+            --border: #404040;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+            background: var(--bg-primary);
+            min-height: 100vh;
+            padding: 40px 20px;
+            color: var(--text-primary);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            animation: fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h1 {
+            font-size: 40px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 16px;
+            color: var(--text-secondary);
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: var(--text-primary);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: var(--shadow-md);
+            z-index: 100;
+        }
+
+        .theme-toggle:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .theme-toggle:active {
+            transform: scale(0.95);
+        }
+
+        .category {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-lg);
+            border-top: 3px solid transparent;
+            background-image: linear-gradient(var(--bg-secondary), var(--bg-secondary)),
+                              linear-gradient(135deg, var(--primary), var(--secondary));
+            background-origin: border-box;
+            background-clip: padding-box, border-box;
+            animation: slideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            animation-fill-mode: both;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .category:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .category:nth-child(1) { animation-delay: 0.1s; }
+        .category:nth-child(2) { animation-delay: 0.2s; }
+        .category:nth-child(3) { animation-delay: 0.3s; }
+        .category:nth-child(4) { animation-delay: 0.4s; }
+
+        .category-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            letter-spacing: -0.02em;
+        }
+
+        .icon-badge {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius);
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+        }
+
+        .feature {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 15px;
+            background: var(--bg-primary);
+            border-radius: var(--radius);
+            font-size: 14px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid var(--border);
+            min-height: 48px;
+        }
+
+        .feature:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .status {
+            font-size: 18px;
+            font-weight: bold;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .status.enabled {
+            color: var(--success);
+        }
+
+        .status.disabled {
+            color: var(--danger);
+        }
+
+        .feature-name {
+            color: var(--text-primary);
+            font-weight: 500;
+            flex: 1;
+        }
+
+        .back-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border: none;
+            border-radius: 50%;
+            box-shadow: var(--shadow-lg);
+            cursor: pointer;
+            font-size: 24px;
+            color: white;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .back-btn:hover {
+            transform: translateY(-4px) scale(1.05);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+        }
+
+        .back-btn:active {
+            transform: scale(0.95);
+        }
+
+        .loading {
+            text-align: center;
+            color: var(--text-primary);
+            padding: 60px 20px;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border);
+            border-top: 4px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            padding: 4px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .error-state {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            padding: 40px;
+            text-align: center;
+            border: 2px solid var(--danger);
+        }
+
+        .error-state i {
+            font-size: 48px;
+            color: var(--danger);
+            margin-bottom: 20px;
+        }
+
+        .error-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 10px;
+        }
+
+        .error-message {
+            color: var(--text-secondary);
+            font-size: 16px;
+        }
+
+        .refresh-notice {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-top: 30px;
+            animation: fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) 0.5s both;
+        }
+
+        .refresh-notice i {
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .kbd {
+            display: inline-block;
+            padding: 2px 6px;
+            font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+            font-size: 12px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            box-shadow: 0 1px 0 var(--border);
+            margin: 0 2px;
+        }
+
+        @media (max-width: 768px) {
+            .theme-toggle {
+                top: 20px;
+                right: 20px;
+            }
+
+            h1 {
+                font-size: 32px;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .category {
+                padding: 20px;
+            }
+
+            .back-btn {
+                bottom: 20px;
+                right: 20px;
+                width: 56px;
+                height: 56px;
+            }
+        }
+
+        @media (max-width: 640px) {
+            body {
+                padding: 20px 12px;
+            }
+
+            h1 {
+                font-size: 28px;
+            }
+
+            .category-title {
+                font-size: 18px;
+            }
+        }
+
+        @media print {
+            .theme-toggle,
+            .back-btn,
+            .refresh-notice {
+                display: none !important;
+            }
+
+            body {
+                background: white;
+                color: black;
+            }
+
+            .category {
+                break-inside: avoid;
+                box-shadow: none;
+                border: 1px solid #ddd;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" id="themeToggle" title="Toggle theme (D)">
+        <i class="fas fa-moon"></i>
+    </button>
+
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p>Loading features...</p>
+    </div>
+
+    <div class="container" id="content" style="display: none;"></div>
+
+    <a href="/info" class="back-btn" title="Back to Info (I)">
+        <i class="fas fa-arrow-left"></i>
+    </a>
+
+    <script>
+        // Theme Management
+        const themeToggle = document.getElementById('themeToggle');
+        const html = document.documentElement;
+        const savedTheme = localStorage.getItem('theme');
+        
+        if (savedTheme) {
+            html.setAttribute('data-theme', savedTheme);
+            updateThemeIcon(savedTheme);
+        }
+
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon(newTheme);
+        });
+
+        function updateThemeIcon(theme) {
+            const icon = themeToggle.querySelector('i');
+            icon.className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+        }
+
+        // Keyboard Shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            
+            switch(e.key.toLowerCase()) {
+                case 'r':
+                    loadFeatures();
+                    break;
+                case 'i':
+                    window.location.href = '/info';
+                    break;
+                case 'd':
+                    themeToggle.click();
+                    break;
+            }
+        });
+
+        // Icon mapping for categories
+        const categoryIcons = {
+            'Authentication Features': 'fa-lock',
+            'Social Login Providers': 'fa-globe',
+            'User Features': 'fa-user',
+            'System Features': 'fa-gear'
+        };
+
+        async function loadFeatures() {
+            const loading = document.getElementById('loading');
+            const content = document.getElementById('content');
+
+            try {
+                let response;
+                try {
+                    response = await fetch('/api/v1/info/features');
+                    if (!response.ok) throw new Error('Versioned API not found');
+                } catch (e) {
+                    response = await fetch('/api/info/features');
+                }
+
+                const result = await response.json();
+                const features = result.data;
+
+                loading.style.display = 'none';
+                content.style.display = 'block';
+
+                const categories = [
+                    { title: 'Authentication Features', data: features.authentication },
+                    { title: 'Social Login Providers', data: features.social },
+                    { title: 'User Features', data: features.user },
+                    { title: 'System Features', data: features.system }
+                ];
+
+                content.innerHTML = `
+                    <div class="header">
+                        <h1>Features & Capabilities</h1>
+                        <p class="subtitle">Enabled features and available functionality</p>
+                    </div>
+                    ${categories.map(cat => `
+                        <div class="category">
+                            <div class="category-title">
+                                <div class="icon-badge">
+                                    <i class="fas ${categoryIcons[cat.title]}"></i>
+                                </div>
+                                ${cat.title}
+                            </div>
+                            <div class="features-grid">
+                                ${Object.entries(cat.data).map(([key, enabled]) => `
+                                    <div class="feature">
+                                        <span class="status ${enabled ? 'enabled' : 'disabled'}">
+                                            <i class="fas ${enabled ? 'fa-check' : 'fa-times'}"></i>
+                                        </span>
+                                        <span class="feature-name">${formatFeatureName(key)}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `).join('')}
+                    <div class="refresh-notice">
+                        <i class="fas fa-info-circle"></i> 
+                        Auto-refresh in 30s | Press <span class="kbd">R</span> to refresh, 
+                        <span class="kbd">I</span> for info, <span class="kbd">D</span> for dark mode
+                    </div>
+                `;
+
+            } catch (error) {
+                loading.style.display = 'none';
+                content.style.display = 'block';
+                content.innerHTML = `
+                    <div class="header">
+                        <div class="error-state">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <div class="error-title">Failed to Load Features</div>
+                            <div class="error-message">${error.message}</div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function formatFeatureName(name) {
+            return name
+                .replace(/([A-Z])/g, ' $1')
+                .replace(/^./, str => str.toUpperCase())
+                .trim();
+        }
+
+        // Auto-refresh every 30 seconds
+        let refreshInterval;
+        function startAutoRefresh() {
+            refreshInterval = setInterval(() => {
+                loadFeatures();
+            }, 30000);
+        }
+
+        // Initial load
+        loadFeatures().then(() => startAutoRefresh());
+
+        // Stop auto-refresh when page is hidden
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                clearInterval(refreshInterval);
+            } else {
+                startAutoRefresh();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Information</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --primary-light: #818cf8;
+            --secondary: #8b5cf6;
+            --accent: #ec4899;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8fafc;
+            --bg-tertiary: #f1f5f9;
+            --bg-elevated: #ffffff;
+            
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-tertiary: #94a3b8;
+            
+            --border-color: #e2e8f0;
+            
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+            
+            --radius-sm: 6px;
+            --radius: 8px;
+            --radius-lg: 12px;
+            
+            --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-primary: #0f172a;
+                --bg-secondary: #1e293b;
+                --bg-tertiary: #334155;
+                --bg-elevated: #1e293b;
+                
+                --text-primary: #f1f5f9;
+                --text-secondary: #cbd5e1;
+                --text-tertiary: #64748b;
+                
+                --border-color: #334155;
+            }
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'SF Pro Display', Roboto, 'Helvetica Neue', sans-serif;
+            background: var(--bg-secondary);
+            min-height: 100vh;
+            padding: 40px 20px;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: var(--text-primary);
+            margin-bottom: 40px;
+            animation: fadeIn 0.6s ease-out;
+            background: var(--bg-elevated);
+            padding: 48px 32px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border-color);
+            position: relative;
+        }
+
+        @keyframes fadeIn {
+            from { 
+                opacity: 0; 
+                transform: translateY(-20px); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0); 
+            }
+        }
+
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: var(--bg-tertiary);
+            border: none;
+            color: var(--text-primary);
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            font-size: 1rem;
+            z-index: 10;
+        }
+
+        .theme-toggle:hover {
+            background: var(--bg-tertiary);
+            transform: scale(1.05);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.02em;
+        }
+
+        .header p {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .card {
+            background: var(--bg-elevated);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-md);
+            animation: slideUp 0.5s ease-out;
+            animation-fill-mode: both;
+            border: 1px solid var(--border-color);
+            transition: var(--transition);
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-2px);
+        }
+
+        .card:nth-child(1) { animation-delay: 0.1s; }
+        .card:nth-child(2) { animation-delay: 0.15s; }
+        .card:nth-child(3) { animation-delay: 0.2s; }
+        .card:nth-child(4) { animation-delay: 0.25s; }
+        .card:nth-child(5) { animation-delay: 0.3s; }
+        .card:nth-child(6) { animation-delay: 0.35s; }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .icon {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border-radius: var(--radius);
+            font-size: 1rem;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+        }
+
+        .info-item {
+            padding: 16px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            transition: var(--transition);
+            border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .info-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .info-item:hover::before {
+            transform: scaleX(1);
+        }
+
+        .info-item:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow);
+            border-color: var(--primary);
+        }
+
+        .info-label {
+            color: var(--text-tertiary);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 8px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .info-label i {
+            font-size: 0.7rem;
+            opacity: 0.7;
+        }
+
+        .info-value {
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            font-weight: 600;
+            word-break: break-word;
+            line-height: 1.5;
+        }
+
+        .info-value a {
+            color: var(--primary);
+            text-decoration: none;
+            transition: var(--transition);
+        }
+
+        .info-value a:hover {
+            color: var(--primary-dark);
+            text-decoration: underline;
+        }
+
+        .feature-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 12px;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            font-size: 0.875rem;
+            transition: var(--transition);
+            border: 1px solid var(--border-color);
+            font-weight: 500;
+        }
+
+        .feature-item:hover {
+            transform: translateX(4px);
+            box-shadow: var(--shadow-sm);
+            border-color: var(--primary);
+        }
+
+        .feature-status {
+            font-size: 1rem;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .feature-status.enabled {
+            color: white;
+            background: var(--success);
+        }
+
+        .feature-status.disabled {
+            color: white;
+            background: var(--danger);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 100px 20px;
+            color: var(--text-primary);
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--bg-tertiary);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 24px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: var(--bg-elevated);
+            border-radius: var(--radius-lg);
+            padding: 48px;
+            text-align: center;
+            color: var(--danger);
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border-color);
+        }
+
+        .error-message h2 {
+            margin-bottom: 16px;
+            font-size: 1.5rem;
+        }
+
+        .error-message i {
+            font-size: 3rem;
+            margin-bottom: 16px;
+            opacity: 0.8;
+        }
+
+        .refresh-btn {
+            position: fixed;
+            bottom: 32px;
+            right: 32px;
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border: none;
+            border-radius: 50%;
+            box-shadow: var(--shadow-lg);
+            cursor: pointer;
+            color: white;
+            font-size: 1.25rem;
+            transition: var(--transition);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .refresh-btn:hover {
+            transform: scale(1.1) rotate(180deg);
+            box-shadow: 0 8px 30px rgba(99, 102, 241, 0.5);
+        }
+
+        .refresh-btn:active {
+            transform: scale(0.95);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .badge-success {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+        }
+
+        .badge-warning {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
+        }
+
+        .badge-danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+
+        .badge-info {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--primary);
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 16px;
+            }
+
+            .header {
+                padding: 32px 24px;
+            }
+
+            .header h1 {
+                font-size: 1.75rem;
+            }
+            
+            .card {
+                padding: 24px;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .feature-list {
+                grid-template-columns: 1fr;
+            }
+
+            .refresh-btn {
+                bottom: 20px;
+                right: 20px;
+                width: 48px;
+                height: 48px;
+                font-size: 1rem;
+            }
+        }
+
+        /* Print Styles */
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+
+            .theme-toggle, .refresh-btn {
+                display: none !important;
+            }
+
+            .card {
+                box-shadow: none;
+                border: 1px solid #ddd;
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p>Loading server information...</p>
+    </div>
+
+    <div class="container" id="content" style="display: none;"></div>
+
+    <button class="refresh-btn" onclick="loadInfo()" title="Refresh Information">
+        <i class="fas fa-sync-alt"></i>
+    </button>
+
+    <script>
+        // Theme toggle functionality
+        function toggleTheme() {
+            const root = document.documentElement;
+            const btn = document.querySelector('.theme-toggle i');
+            const currentTheme = localStorage.getItem('theme') || 'auto';
+            
+            if (currentTheme === 'dark') {
+                localStorage.setItem('theme', 'light');
+                root.style.colorScheme = 'light';
+                btn.className = 'fas fa-moon';
+            } else {
+                localStorage.setItem('theme', 'dark');
+                root.style.colorScheme = 'dark';
+                btn.className = 'fas fa-sun';
+            }
+        }
+
+        // Load saved theme
+        (function() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {
+                document.documentElement.style.colorScheme = savedTheme;
+            }
+        })();
+
+        async function loadInfo() {
+            const loading = document.getElementById('loading');
+            const content = document.getElementById('content');
+
+            loading.style.display = 'block';
+            content.style.display = 'none';
+
+            try {
+                // Try versioned API first, fallback to non-versioned
+                let response;
+                try {
+                    response = await fetch('/api/v1/info');
+                    if (!response.ok) throw new Error('Versioned API not found');
+                } catch (e) {
+                    response = await fetch('/api/info');
+                }
+                
+                const result = await response.json();
+                const info = result.data;
+
+                loading.style.display = 'none';
+                content.style.display = 'block';
+
+                // Determine environment badge
+                const envBadges = {
+                    'production': 'badge-success',
+                    'development': 'badge-warning',
+                    'staging': 'badge-info',
+                    'testing': 'badge-danger'
+                };
+                const envBadge = envBadges[info.environment.toLowerCase()] || 'badge-info';
+
+                content.innerHTML = `
+                    <div class="header">
+                        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme" title="Toggle dark mode">
+                            <i class="fas fa-moon"></i>
+                        </button>
+                        <h1>${info.application.name}</h1>
+                        <p>${info.application.description}</p>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">
+                            <div class="icon"><i class="fas fa-info-circle"></i></div>
+                            Application Details
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <div class="info-label"><i class="fas fa-tag"></i>Version</div>
+                                <div class="info-value">${info.application.version}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label"><i class="fas fa-server"></i>Environment</div>
+                                <div class="info-value">
+                                    <span class="badge ${envBadge}">${info.environment}</span>
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label"><i class="fas fa-user"></i>Author</div>
+                                <div class="info-value">${info.application.author}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label"><i class="fas fa-envelope"></i>Support</div>
+                                <div class="info-value"><a href="mailto:${info.support.email}">${info.support.email}</a></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">
+                            <div class="icon"><i class="fas fa-globe"></i></div>
+                            Deployment Configuration
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <div class="info-label"><i class="fas fa-cloud"></i>Mode</div>
+                                <div class="info-value">${info.deployment.mode}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label"><i class="fas fa-link"></i>Base URL</div>
+                                <div class="info-value"><a href="${info.deployment.baseUrl}" target="_blank">${info.deployment.baseUrl}</a></div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label"><i class="fas fa-desktop"></i>Frontend</div>
+                                <div class="info-value"><a href="${info.deployment.frontendUrl}" target="_blank">${info.deployment.frontendUrl}</a></div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label"><i class="fas fa-th-large"></i>Dashboard</div>
+                                <div class="info-value"><a href="${info.deployment.dashboardUrl}" target="_blank">${info.deployment.dashboardUrl}</a></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">
+                            <div class="icon"><i class="fas fa-star"></i></div>
+                            Features & Capabilities
+                        </div>
+                        <div class="feature-list">
+                            ${Object.entries(info.features).map(([key, value]) => `
+                                <div class="feature-item">
+                                    <span class="feature-status ${value ? 'enabled' : 'disabled'}">
+                                        <i class="fas ${value ? 'fa-check' : 'fa-times'}"></i>
+                                    </span>
+                                    <span>${formatFeatureName(key)}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">
+                            <div class="icon"><i class="fas fa-shield-alt"></i></div>
+                            Security Configuration
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <div class="info-label"><i class="fas fa-cookie"></i>Secure Cookies</div>
+                                <div class="info-value">
+                                    <span class="badge ${info.security.cookieSecure ? 'badge-success' : 'badge-danger'}">
+                                        ${info.security.cookieSecure ? 'Enabled' : 'Disabled'}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label"><i class="fas fa-cookie-bite"></i>SameSite</div>
+                                <div class="info-value">${info.security.cookieSameSite}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label"><i class="fas fa-globe-americas"></i>CORS Policy</div>
+                                <div class="info-value">
+                                    <span class="badge ${info.security.corsAllOrigins ? 'badge-warning' : 'badge-success'}">
+                                        ${info.security.corsAllOrigins ? 'All Origins' : 'Restricted'}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label"><i class="fas fa-tachometer-alt"></i>Rate Limiting</div>
+                                <div class="info-value">
+                                    <span class="badge ${info.security.rateLimitingEnabled ? 'badge-success' : 'badge-danger'}">
+                                        ${info.security.rateLimitingEnabled ? 'Enabled' : 'Disabled'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">
+                            <div class="icon"><i class="fas fa-external-link-alt"></i></div>
+                            Quick Links
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <div class="info-label"><i class="fas fa-home"></i>Home</div>
+                                <div class="info-value"><a href="/">Server Status</a></div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label"><i class="fas fa-heartbeat"></i>Health</div>
+                                <div class="info-value"><a href="/health">Health Check</a></div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label"><i class="fas fa-code-branch"></i>Version</div>
+                                <div class="info-value"><a href="/api/info/version">Version Info</a></div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label"><i class="fas fa-star"></i>Features</div>
+                                <div class="info-value"><a href="/api/info/features">Feature Flags</a></div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label"><i class="fas fa-book"></i>Documentation</div>
+                                <div class="info-value"><a href="/api/docs">Docs Index</a></div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label"><i class="fas fa-list"></i>Docs List</div>
+                                <div class="info-value"><a href="/api/docs/list">Browse All</a></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Initialize theme toggle after content is loaded
+                const savedTheme = localStorage.getItem('theme');
+                const btn = document.querySelector('.theme-toggle i');
+                if (savedTheme === 'dark' && btn) {
+                    btn.className = 'fas fa-sun';
+                }
+
+            } catch (error) {
+                loading.style.display = 'none';
+                content.style.display = 'block';
+                content.innerHTML = `
+                    <div class="error-message">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h2>Failed to Load Server Information</h2>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function formatFeatureName(name) {
+            return name
+                .replace(/([A-Z])/g, ' $1')
+                .replace(/^./, str => str.toUpperCase())
+                .trim();
+        }
+
+        // Load on page load
+        loadInfo();
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Press 'r' to refresh
+            if (e.key === 'r' && !e.ctrlKey && !e.metaKey) {
+                loadInfo();
+            }
+        });
+
+        // Add visual feedback for refresh button
+        document.querySelector('.refresh-btn').addEventListener('click', function() {
+            this.style.animation = 'spin 0.5s ease';
+            setTimeout(() => {
+                this.style.animation = '';
+            }, 500);
+        });
+    </script>
+</body>
+</html>

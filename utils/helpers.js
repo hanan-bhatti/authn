@@ -3,6 +3,13 @@ const crypto = require('crypto');
 
 /**
  * Custom API Error class
+ * @param {string} message - Error message
+ * @param {number} statusCode - HTTP status code (default: 500)
+ * @param {boolean} isOperational - Whether error is operational (default: true)
+ * @param {any} details - Additional error details (default: null)
+ * @example
+ * throw new ApiError('User not found', 404);
+ * throw new ApiError('Validation failed', 400, true, { field: 'email' });
  */
 class ApiError extends Error {
   constructor(message, statusCode = 500, isOperational = true, details = null) {
@@ -19,14 +26,46 @@ class ApiError extends Error {
 /**
  * Standardized API Response class
  */
+const config = require('./config');
+const { formatDate } = require('./localization');
+
 class ApiResponse {
-  constructor({ data = null, message = 'Success', meta = null, pagination = null } = {}) {
-    this.success = true;
+  constructor({ 
+    success = true, 
+    data = null, 
+    message = 'Success', 
+    error = null,
+    code = null,
+    meta = null, 
+    pagination = null, 
+    req = null 
+  } = {}) {
+    this.success = success;
     this.message = message;
-    this.timestamp = new Date().toISOString();
+    this.timestamp = formatDate(new Date(), req?.timezone, config.DATE_FORMAT);
+
+    // Add error field for error responses
+    if (error !== null) this.error = error;
+    
+    // Add code field for error/status codes
+    if (code !== null) this.code = code;
 
     if (data !== null) this.data = data;
-    if (meta !== null) this.meta = meta;
+    
+    // Enhanced meta with localization context
+    if (meta !== null || req) {
+      this.meta = {
+        ...(meta || {}),
+        ...(req && {
+          language: req.language || config.DEFAULT_LANGUAGE,
+          timezone: req.timezone || config.DEFAULT_TIMEZONE,
+          apiVersion: config.API_VERSIONING_ENABLED ? config.API_VERSION : undefined
+        })
+      };
+      // Remove undefined fields
+      if (this.meta.apiVersion === undefined) delete this.meta.apiVersion;
+    }
+    
     if (pagination !== null) this.pagination = pagination;
   }
 }
@@ -447,10 +486,13 @@ const securityUtils = {
   },
 
   encrypt: (text, key = process.env.ENCRYPTION_KEY) => {
+    if (!key) {
+      throw new Error('ENCRYPTION_KEY environment variable is not set. Cannot encrypt data.');
+    }
     const algorithm = 'aes-256-cbc';
     const iv = crypto.randomBytes(16);
 
-    const cipher = crypto.createCipher(algorithm, key);
+    const cipher = crypto.createCipheriv(algorithm, Buffer.from(key, 'hex'), iv);
     let encrypted = cipher.update(text, 'utf8', 'hex');
     encrypted += cipher.final('hex');
 
@@ -458,11 +500,14 @@ const securityUtils = {
   },
 
   decrypt: (encryptedData, key = process.env.ENCRYPTION_KEY) => {
+    if (!key) {
+      throw new Error('ENCRYPTION_KEY environment variable is not set. Cannot decrypt data.');
+    }
     const algorithm = 'aes-256-cbc';
     const [ivHex, encrypted] = encryptedData.split(':');
 
     const iv = Buffer.from(ivHex, 'hex');
-    const decipher = crypto.createDecipher(algorithm, key);
+    const decipher = crypto.createDecipheriv(algorithm, Buffer.from(key, 'hex'), iv);
 
     let decrypted = decipher.update(encrypted, 'hex', 'utf8');
     decrypted += decipher.final('utf8');

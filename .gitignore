@@ -74,73 +74,19 @@ web_modules/
 .env.*
 !.env.example
 
-# parcel-bundler cache (https://parceljs.org/)
-.cache
-.parcel-cache
-
-# Next.js build output
-.next
-out
-
-# Nuxt.js build / generate output
-.nuxt
-dist
-
-# Gatsby files
-.cache/
-# Comment in the public line in if your project uses Gatsby and not Next.js
-# https://nextjs.org/blog/next-9-1#public-directory-support
-# public
-
-# vuepress build output
-.vuepress/dist
-
-# vuepress v2.x temp and cache directory
-.temp
-.cache
-
-# Sveltekit cache directory
-.svelte-kit/
-
-# vitepress build output
-**/.vitepress/dist
-
-# vitepress cache directory
-**/.vitepress/cache
-
-# Docusaurus cache and generated files
-.docusaurus
-
-# Serverless directories
-.serverless/
-
-# FuseBox cache
-.fusebox/
-
-# DynamoDB Local files
-.dynamodb/
-
-# Firebase cache directory
-.firebase/
-
-# TernJS port file
-.tern-port
-
-# Stores VSCode versions used for testing VSCode extensions
-.vscode-test
-
-# yarn v3
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/sdks
-!.yarn/versions
-
-# Vite logs files
-vite.config.js.timestamp-*
-vite.config.ts.timestamp-*
-.gemini/
-gha-creds-*.json
+# Documentation
 full_security_api_audit.md
+AI_Fix_API_Responses.md
+AUTHN_API_RESPONSE.md
+
+# Custom directories
+benchmarks/
+backups/
+postman/
+logs/
+
+benchmarks_tests_pws/
+benchmark_tests_pws/run-benchmark.ps1
+benchmark_tests_pws/run-comprehensive-benchmark.ps1
+benchmark_tests_pws/run-postman-tests.bat
+benchmark_tests_pws/run-tests.ps1

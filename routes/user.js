@@ -28,6 +28,8 @@ const {
 const { sendEmail } = require('../services/email');
 const { uploadToS3, deleteFromS3, generateSignedUrl } = require('../services/storage');
 
+const config = require('../utils/config');
+
 const router = express.Router();
 
 // Apply security middleware
@@ -40,6 +42,7 @@ const authLimiter = rateLimit({
   message: { error: 'Too many authentication attempts, please try again later' },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => process.env.DEV_DISABLE_RATE_LIMITING === 'true',
 });
 
 const generalLimiter = rateLimit({
@@ -48,12 +51,14 @@ const generalLimiter = rateLimit({
   message: { error: 'Too many requests, please try again later' },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => process.env.DEV_DISABLE_RATE_LIMITING === 'true',
 });
 
 const uploadLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 10, // 10 uploads per hour
   message: { error: 'Too many upload attempts, please try again later' },
+  skip: (req) => process.env.DEV_DISABLE_RATE_LIMITING === 'true',
 });
 
 // File upload configuration
@@ -260,15 +265,17 @@ router.post('/2fa/setup',
 
     // Generate secret
     const secret = speakeasy.generateSecret({
-      name: `Authn (${user.email})`,
-      issuer: 'Authn',
+      name: `${process.env.TWO_FACTOR_ISSUER || 'Authn'} (${user.email})`,
+      issuer: process.env.TWO_FACTOR_ISSUER || 'Authn',
       length: 32
     });
 
     // Generate backup codes
+    const backupCodesCount = parseInt(process.env.TWO_FACTOR_BACKUP_CODES_COUNT, 10) || 8;
+    const backupCodeLength = parseInt(process.env.TWO_FACTOR_BACKUP_CODE_LENGTH, 10) || 8;
     const backupCodes = [];
-    for (let i = 0; i < 8; i++) {
-      const code = crypto.randomBytes(4).toString('hex').toUpperCase();
+    for (let i = 0; i < backupCodesCount; i++) {
+      const code = crypto.randomBytes(Math.ceil(backupCodeLength / 2)).toString('hex').slice(0, backupCodeLength).toUpperCase();
       const hashedCode = crypto.createHash('sha256').update(code).digest('hex');
       backupCodes.push({ code, hashedCode });
     }
@@ -329,7 +336,7 @@ router.post('/2fa/verify-setup',
       secret: user.twoFactorAuth.secret,
       encoding: 'base32',
       token,
-      window: 2
+      window: parseInt(process.env.TWO_FACTOR_TOTP_WINDOW, 10) || 2
     });
 
     if (!verified) {
@@ -640,7 +647,7 @@ router.get('/profile',
 
     // Add phone carrier info if available
     let phoneInfo = null;
-    if (user.phone) {
+  if (config.FEATURE_LOCATION_ENABLED && user.phone) {
       try {
         const phoneValidation = await validatePhoneNumber(user.phone);
         phoneInfo = {
@@ -771,6 +778,17 @@ router.put('/profile',
  * @access  Private
  */
 router.post('/profile/avatar',
+  (req, res, next) => {
+    if (!config.FEATURE_PROFILE_PICTURE_ENABLED) {
+      return res.status(403).json(new ApiResponse({
+        success: false,
+        error: 'Profile picture upload is disabled',
+        message: 'The ability to upload profile pictures is currently disabled.',
+        code: 'PROFILE_PICTURE_DISABLED'
+      }));
+    }
+    next();
+  },
   uploadLimiter,
   authenticateToken,
   upload.single('avatar'),
@@ -866,6 +884,17 @@ router.post('/profile/avatar',
  * @access  Private
  */
 router.delete('/profile/avatar',
+  (req, res, next) => {
+  if (!config.FEATURE_PROFILE_PICTURE_ENABLED) {
+      return res.status(403).json(new ApiResponse({
+        success: false,
+        error: 'Profile picture management is disabled',
+        message: 'The ability to manage profile pictures is currently disabled.',
+        code: 'PROFILE_PICTURE_DISABLED'
+      }));
+    }
+    next();
+  },
   authenticateToken,
   asyncHandler(async (req, res) => {
     const user = await User.findById(req.user.userId);
@@ -1022,11 +1051,10 @@ router.get('/settings',
 router.put('/settings',
   authenticateToken,
   [
-    body('language')
-      .optional()
-      .isIn(['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'zh', 'ja', 'ko'])
-      .withMessage('Invalid language code'),
-    body('timezone')
+      body('language')
+        .optional()
+        .isIn((process.env.SUPPORTED_LANGUAGES || 'en,es,fr,de,it,pt,ru,zh,ja,ko').split(','))
+        .withMessage('Invalid language code'),    body('timezone')
       .optional()
       .isString()
       .withMessage('Timezone must be a string'),
@@ -1222,6 +1250,17 @@ router.put('/settings',
  */
 router.get('/oauth/:provider',
   authenticateToken,
+  (req, res, next) => {
+    if (!config.FEATURE_SOCIAL_LINKING_ENABLED) {
+      return res.status(403).json(new ApiResponse({
+        success: false,
+        error: 'Social account linking is disabled',
+        message: 'Social account linking is currently disabled',
+        code: 'SOCIAL_LINKING_DISABLED'
+      }));
+    }
+    next();
+  },
   [
     param('provider')
       .isIn(['google', 'facebook', 'apple', 'github', 'twitter', 'linkedin'])
@@ -1287,6 +1326,17 @@ router.get('/oauth/:provider',
  * @access  Public (but validates state token)
  */
 router.get('/oauth/callback/:provider',
+  (req, res, next) => {
+    if (!config.FEATURE_SOCIAL_LINKING_ENABLED) {
+      return res.status(403).json(new ApiResponse({
+        success: false,
+        error: 'Social account linking is disabled',
+        message: 'Social account linking is currently disabled',
+        code: 'SOCIAL_LINKING_DISABLED'
+      }));
+    }
+    next();
+  },
   [
     param('provider')
       .isIn(['google', 'facebook', 'apple', 'github', 'twitter', 'linkedin'])
@@ -1442,6 +1492,17 @@ router.get('/social-accounts',
  */
 router.delete('/social-accounts/:provider',
   authenticateToken,
+  (req, res, next) => {
+    if (!config.FEATURE_SOCIAL_LINKING_ENABLED) {
+      return res.status(403).json(new ApiResponse({
+        success: false,
+        error: 'Social account linking is disabled',
+        message: 'Social account linking is currently disabled',
+        code: 'SOCIAL_LINKING_DISABLED'
+      }));
+    }
+    next();
+  },
   [
     param('provider')
       .isIn(['google', 'facebook', 'apple', 'github', 'twitter', 'linkedin'])
@@ -1588,6 +1649,17 @@ async function getSocialUserInfo(provider, accessToken) {
  * @access  Private
  */
 router.get('/devices',
+  (req, res, next) => {
+  if (!config.FEATURE_DEVICE_MANAGEMENT_ENABLED) {
+      return res.status(403).json(new ApiResponse({
+        success: false,
+        error: 'Device management is disabled',
+        message: 'The ability to manage devices is currently disabled.',
+        code: 'DEVICE_MANAGEMENT_DISABLED'
+      }));
+    }
+    next();
+  },
   authenticateToken,
   asyncHandler(async (req, res) => {
     const user = await User.findById(req.user.userId).select('trustedDevices');
@@ -1610,6 +1682,17 @@ router.get('/devices',
  * @access  Private
  */
 router.patch('/devices/:deviceId/trust',
+  (req, res, next) => {
+  if (!config.FEATURE_DEVICE_MANAGEMENT_ENABLED) {
+      return res.status(403).json(new ApiResponse({
+        success: false,
+        error: 'Device management is disabled',
+        message: 'The ability to manage devices is currently disabled.',
+        code: 'DEVICE_MANAGEMENT_DISABLED'
+      }));
+    }
+    next();
+  },
   authenticateToken,
   asyncHandler(async (req, res) => {
     const { deviceId } = req.params;
@@ -1638,6 +1721,17 @@ router.patch('/devices/:deviceId/trust',
  * @access  Private
  */
 router.delete('/devices/:deviceId',
+  (req, res, next) => {
+  if (!config.FEATURE_DEVICE_MANAGEMENT_ENABLED) {
+      return res.status(403).json(new ApiResponse({
+        success: false,
+        error: 'Device management is disabled',
+        message: 'The ability to manage devices is currently disabled.',
+        code: 'DEVICE_MANAGEMENT_DISABLED'
+      }));
+    }
+    next();
+  },
   authenticateToken,
   [
     param('deviceId')
@@ -1700,6 +1794,17 @@ router.delete('/devices/:deviceId',
  * @access  Private
  */
 router.get('/sessions',
+  (req, res, next) => {
+  if (!config.FEATURE_SESSION_MANAGEMENT_ENABLED) {
+      return res.status(403).json(new ApiResponse({
+        success: false,
+        error: 'Session management is disabled',
+        message: 'The ability to manage sessions is currently disabled.',
+        code: 'SESSION_MANAGEMENT_DISABLED'
+      }));
+    }
+    next();
+  },
   authenticateToken,
   asyncHandler(async (req, res) => {
     const user = await User.findById(req.user.userId).select('sessions');
@@ -1730,6 +1835,17 @@ router.get('/sessions',
  * @access  Private
  */
 router.delete('/sessions/:sessionId',
+  (req, res, next) => {
+  if (!config.FEATURE_SESSION_MANAGEMENT_ENABLED) {
+      return res.status(403).json(new ApiResponse({
+        success: false,
+        error: 'Session management is disabled',
+        message: 'The ability to manage sessions is currently disabled.',
+        code: 'SESSION_MANAGEMENT_DISABLED'
+      }));
+    }
+    next();
+  },
   authenticateToken,
   [
     param('sessionId')
@@ -2127,6 +2243,12 @@ router.get('/audit-logs',
  */
 router.get('/analytics',
   authenticateToken,
+  (req, res, next) => {
+    if (!config.FEATURE_ANALYTICS_ENABLED) {
+      return ApiResponse.error(res, 'Analytics feature is disabled', 403, 'ANALYTICS_DISABLED');
+    }
+    next();
+  },
   asyncHandler(async (req, res) => {
     const user = await User.findById(req.user.userId).select('analytics loginCount createdAt lastLogin trustedDevices');
 
@@ -2187,6 +2309,185 @@ router.get('/analytics',
     res.json(new ApiResponse({
       data: {
         analytics: analyticsData
+      }
+    }));
+  })
+);
+
+// =============================================================================
+// API KEY ROUTES
+// =============================================================================
+
+/**
+ * @route   POST /api/users/api-keys
+ * @desc    Generate a new API key for the user
+ * @access  Private
+ */
+router.post('/api-keys',
+  authenticateToken,
+  (req, res, next) => {
+    if (!config.FEATURE_API_KEYS_ENABLED) {
+      return ApiResponse.error(res, 'API key management is disabled', 403, 'API_KEYS_DISABLED');
+    }
+    next();
+  },
+  [
+    body('name')
+      .trim()
+      .notEmpty()
+      .withMessage('API key name is required')
+      .isLength({ min: 3, max: 50 })
+      .withMessage('API key name must be between 3 and 50 characters'),
+    body('permissions')
+      .optional()
+      .isArray()
+      .withMessage('Permissions must be an array')
+  ],
+  asyncHandler(async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      throw new ApiError('Validation failed', 400, errors.array());
+    }
+
+    const { name, permissions = [] } = req.body;
+
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      throw new ApiError('User not found', 404);
+    }
+
+    // Check if user already has an API key with this name
+    if (user.apiKeys && user.apiKeys.some(key => key.name === name && key.isActive)) {
+      throw new ApiError('An active API key with this name already exists', 400, null, 'DUPLICATE_API_KEY_NAME');
+    }
+
+    // Generate the API key (returns the unhashed key to show to user)
+    const apiKeyString = user.generateApiKey(name, permissions);
+    
+    // Save the user with the new API key
+    await user.save();
+
+    // Get the newly created API key (last in the array)
+    const newApiKey = user.apiKeys[user.apiKeys.length - 1];
+
+    // Log the action
+    if (config.FEATURE_AUDIT_LOGS_ENABLED) {
+      user.addAuditLog('api_key_created', req, {
+        keyId: newApiKey._id.toString(),
+        keyName: name
+      });
+      await user.save();
+    }
+
+    res.status(201).json(new ApiResponse({
+      message: 'API key generated successfully',
+      data: {
+        apiKey: apiKeyString, // Only time the full key is shown
+        keyId: newApiKey._id,
+        name: newApiKey.name,
+        permissions: newApiKey.permissions,
+        createdAt: newApiKey.createdAt,
+        warning: 'Save this API key securely. You will not be able to see it again.'
+      }
+    }));
+  })
+);
+
+/**
+ * @route   GET /api/users/api-keys
+ * @desc    List all API keys for the user (excluding the actual key values)
+ * @access  Private
+ */
+router.get('/api-keys',
+  authenticateToken,
+  (req, res, next) => {
+    if (!config.FEATURE_API_KEYS_ENABLED) {
+      return ApiResponse.error(res, 'API key management is disabled', 403, 'API_KEYS_DISABLED');
+    }
+    next();
+  },
+  asyncHandler(async (req, res) => {
+    const user = await User.findById(req.user.userId).select('apiKeys');
+
+    if (!user) {
+      throw new ApiError('User not found', 404);
+    }
+
+    // Return only metadata, not the actual key values
+    const apiKeys = (user.apiKeys || []).map(key => ({
+      id: key._id,
+      name: key.name,
+      permissions: key.permissions,
+      isActive: key.isActive,
+      createdAt: key.createdAt,
+      lastUsed: key.lastUsed
+    }));
+
+    res.json(new ApiResponse({
+      data: {
+        apiKeys,
+        total: apiKeys.length,
+        active: apiKeys.filter(k => k.isActive).length
+      }
+    }));
+  })
+);
+
+/**
+ * @route   DELETE /api/users/api-keys/:keyId
+ * @desc    Revoke an API key
+ * @access  Private
+ */
+router.delete('/api-keys/:keyId',
+  authenticateToken,
+  (req, res, next) => {
+    if (!config.FEATURE_API_KEYS_ENABLED) {
+      return ApiResponse.error(res, 'API key management is disabled', 403, 'API_KEYS_DISABLED');
+    }
+    next();
+  },
+  [
+    param('keyId')
+      .isMongoId()
+      .withMessage('Invalid API key ID')
+  ],
+  asyncHandler(async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      throw new ApiError('Validation failed', 400, errors.array());
+    }
+
+    const { keyId } = req.params;
+
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      throw new ApiError('User not found', 404);
+    }
+
+    // Find the API key
+    const apiKey = user.apiKeys ? user.apiKeys.id(keyId) : null;
+    if (!apiKey) {
+      throw new ApiError('API key not found', 404);
+    }
+
+    // Revoke the API key
+    user.revokeApiKey(keyId);
+    await user.save();
+
+    // Log the action
+    if (config.FEATURE_AUDIT_LOGS_ENABLED) {
+      user.addAuditLog('api_key_revoked', req, {
+        keyId: keyId,
+        keyName: apiKey.name
+      });
+      await user.save();
+    }
+
+    res.json(new ApiResponse({
+      message: 'API key revoked successfully',
+      data: {
+        keyId,
+        name: apiKey.name
       }
     }));
   })
