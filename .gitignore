@@ -90,3 +90,4 @@ benchmark_tests_pws/run-benchmark.ps1
 benchmark_tests_pws/run-comprehensive-benchmark.ps1
 benchmark_tests_pws/run-postman-tests.bat
 benchmark_tests_pws/run-tests.ps1
+scripts/create_benchmark_admin.js

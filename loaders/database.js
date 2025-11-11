@@ -8,19 +8,19 @@ const logger = require('./logger');
  */
 const connectDatabase = async () => {
   try {
-    // Optimized for 1GB RAM: smaller pool, aggressive timeouts
+    // MongoDB connection options using environment variables
     const mongoOptions = {
-      maxPoolSize: 50, // Reduced from 500 for memory efficiency
-      minPoolSize: 5,  // Reduced from 50 for faster startup
+      maxPoolSize: config.MONGO_MAX_POOL_SIZE, // From env: MONGO_MAX_POOL_SIZE (default: 500)
+      minPoolSize: config.MONGO_MIN_POOL_SIZE, // From env: MONGO_MIN_POOL_SIZE (default: 50)
       maxIdleTimeMS: 30000, // Close idle connections faster (30s)
       waitQueueTimeoutMS: 5000, // Fail fast on pool exhaustion (5s)
-      serverSelectionTimeoutMS: 5000, // Faster connection selection
-      socketTimeoutMS: 30000, // Reduced from 60s for faster timeout
+      serverSelectionTimeoutMS: config.MONGO_TIMEOUT_MS, // From env: MONGO_TIMEOUT_MS (default: 10000)
+      socketTimeoutMS: config.MONGO_SOCKET_TIMEOUT_MS, // From env: MONGO_SOCKET_TIMEOUT_MS (default: 60000)
       bufferCommands: false, // Fail immediately if not connected
       family: 4, // Use IPv4, skip IPv6 DNS lookups
       retryWrites: true,
       retryReads: true,
-      connectTimeoutMS: 5000, // Faster connection timeout
+      connectTimeoutMS: config.MONGO_TIMEOUT_MS, // From env: MONGO_TIMEOUT_MS (default: 10000)
       // Performance optimizations
       compressors: 'zlib', // Enable compression to reduce bandwidth
       zlibCompressionLevel: 1, // Fast compression (less CPU)
@@ -34,8 +34,7 @@ const connectDatabase = async () => {
     // Enable query result caching for better performance
     mongoose.set('debug', false); // Disable debug in production
     
-    console.log(`✅ MongoDB connected (Pool: 5-50 connections, optimized for 1GB RAM)`);
-
+    console.log('✅ MongoDB connected successfully');
     // Handle connection events
     mongoose.connection.on('error', (err) => {
       console.error('❌ MongoDB connection error:', err);

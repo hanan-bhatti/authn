@@ -5,6 +5,39 @@ const { timeUtils } = require('../utils/helpers');
 const config = require('../utils/config');
 const redisService = require('../services/redis');
 
+// Safe logger wrapper - handles cases where logger module hasn't been initialized yet
+const loggerModule = require('../loaders/logger');
+const logger = {
+  warn: (...args) => {
+    if (loggerModule.warn && typeof loggerModule.warn === 'function') {
+      loggerModule.warn(...args);
+    } else {
+      console.warn(...args);
+    }
+  },
+  error: (...args) => {
+    if (loggerModule.error && typeof loggerModule.error === 'function') {
+      loggerModule.error(...args);
+    } else {
+      console.error(...args);
+    }
+  },
+  info: (...args) => {
+    if (loggerModule.info && typeof loggerModule.info === 'function') {
+      loggerModule.info(...args);
+    } else {
+      console.log(...args);
+    }
+  },
+  debug: (...args) => {
+    if (loggerModule.debug && typeof loggerModule.debug === 'function') {
+      loggerModule.debug(...args);
+    } else {
+      console.log(...args);
+    }
+  }
+};
+
 const deviceSchema = new mongoose.Schema({
   deviceId: { type: String, required: true },
   deviceName: String,
@@ -1142,13 +1175,15 @@ userSchema.statics.findByIdentifier = async function (identifier) {
   try {
     const cached = await redisService.client.get(cacheKey);
     if (cached) {
-      return JSON.parse(cached); // Return plain object (faster)
+      // Return full Mongoose document (not plain object) so methods like comparePassword work
+      const plainUser = JSON.parse(cached);
+      return this.hydrate(plainUser); // Convert plain object back to Mongoose document
     }
   } catch (err) {
-    getLogger().warn('Redis cache lookup failed for identifier:', err.message);
+    logger.warn('Redis cache lookup failed for identifier:', err.message);
   }
   
-  // Cache miss - query MongoDB with lean() for faster read-only query
+  // Cache miss - query MongoDB (no lean() so we get full Mongoose document with methods)
   const user = await this.findOne({
     $or: [
       { email: normalizedIdentifier },
@@ -1156,17 +1191,17 @@ userSchema.statics.findByIdentifier = async function (identifier) {
     ],
     isDeleted: false
   })
-  .select('+password') // Include password for authentication
-  .lean(); // 30% faster for read-only operations
+  .select('+password'); // Include password for authentication
   
   // Cache the result if found (TTL: 1 hour)
   if (user) {
     try {
-      await redisService.client.setEx(cacheKey, config.REDIS_USER_TTL || 3600, JSON.stringify(user));
+      // Store plain object in cache
+      await redisService.client.setEx(cacheKey, config.REDIS_USER_TTL || 3600, JSON.stringify(user.toObject()));
       // Also cache by user ID for consistency
-      await redisService.cacheUser(user._id.toString(), user, config.REDIS_USER_TTL || 3600);
+      await redisService.cacheUser(user._id.toString(), user.toObject(), config.REDIS_USER_TTL || 3600);
     } catch (err) {
-      getLogger().warn('Redis cache store failed:', err.message);
+      logger.warn('Redis cache store failed:', err.message);
     }
   }
   
@@ -1237,14 +1272,14 @@ userSchema.post('save', async function(doc) {
     try {
       await redisService.client.del(`user:identifier:${doc.email.toLowerCase()}`);
     } catch (err) {
-      getLogger().warn('Failed to invalidate email identifier cache:', err.message);
+      logger.warn('Failed to invalidate email identifier cache:', err.message);
     }
   }
   if (doc.username) {
     try {
       await redisService.client.del(`user:identifier:${doc.username.toLowerCase()}`);
     } catch (err) {
-      getLogger().warn('Failed to invalidate username identifier cache:', err.message);
+      logger.warn('Failed to invalidate username identifier cache:', err.message);
     }
   }
 });
@@ -1262,14 +1297,14 @@ userSchema.post('findOneAndUpdate', async function(doc) {
       try {
         await redisService.client.del(`user:identifier:${doc.email.toLowerCase()}`);
       } catch (err) {
-        getLogger().warn('Failed to invalidate email identifier cache:', err.message);
+        logger.warn('Failed to invalidate email identifier cache:', err.message);
       }
     }
     if (doc.username) {
       try {
         await redisService.client.del(`user:identifier:${doc.username.toLowerCase()}`);
       } catch (err) {
-        getLogger().warn('Failed to invalidate username identifier cache:', err.message);
+        logger.warn('Failed to invalidate username identifier cache:', err.message);
       }
     }
   }

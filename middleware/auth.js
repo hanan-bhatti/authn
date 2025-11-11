@@ -243,11 +243,11 @@ const authenticateToken = asyncHandler(async (req, res, next) => {
     }
 
     // Try cache first (JWT verification is CPU-intensive with bcrypt-level cost)
-    if (redisService && redisService.isConnected()) {
+    if (redisService && redisService.isConnected) {
       const cachedAuth = await redisService.get(`jwt:${token.substring(0, 32)}`);
       if (cachedAuth) {
-        const authData = JSON.parse(cachedAuth);
-        req.user = authData;
+        // Redis service already returns parsed object
+        req.user = cachedAuth;
         return next();
       }
     }
@@ -304,11 +304,11 @@ const authenticateToken = asyncHandler(async (req, res, next) => {
     req.user = authData;
 
     // Cache the auth result for 5 minutes (balance between freshness and performance)
-    if (redisService && redisService.isConnected()) {
-      await redisService.setex(
+    if (redisService && redisService.isConnected) {
+      await redisService.set(
         `jwt:${token.substring(0, 32)}`, 
-        300, // 5 minutes
-        JSON.stringify(authData)
+        authData,
+        300 // 5 minutes TTL
       );
     }
 
