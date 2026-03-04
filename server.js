@@ -808,6 +808,18 @@ app.get('/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
+app.get('/docs', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'docs.html'));
+});
+
+app.get('/changelog', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'changelog.html'));
+});
+
+app.get('/contact', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'contact.html'));
+});
+
 // 404 handler for web routes
 app.use(async (req, res) => {
   // Skip logging for common bot/scanner requests

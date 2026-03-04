@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Authn — Enterprise Authentication Platform</title>
+  <meta name="description" content="Production-grade, self-hosted authentication with 19 integrated security features. Free forever, no vendor lock-in.">
+  <link rel="icon" href="https://spotless-orange-flea.myfilebase.com/ipfs/QmSaqA9tpYReUdr4Xw3uyvsCts5xTeHKsfdiHDiDjTUN4W" type="image/png">
+  <link rel="stylesheet" href="css/website.css">
+</head>
+<body>
+
+  <!-- ── NAV ─────────────────────────────────── -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">
+        <img src="https://spotless-orange-flea.myfilebase.com/ipfs/QmTxYFh6onsouXAS3Jw3kBMJkvbdAuf9LYQ7FnTT5f6mnZ" alt="Authn Logo" class="nav-logo">
+        Authn
+      </a>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="index.html" class="nav-link active">Home</a></li>
+        <li><a href="docs.html" class="nav-link">Docs</a></li>
+        <li><a href="changelog.html" class="nav-link">Changelog</a></li>
+        <li><a href="contact.html" class="nav-link">Contact</a></li>
+      </ul>
+      <div class="nav-actions">
+        <button class="theme-btn" id="themeToggle" title="Toggle theme">🌙</button>
+        <a href="https://github.com/hanan-bhatti/authn" target="_blank" rel="noopener" class="nav-btn nav-btn-outline">
+          ⭐ GitHub
+        </a>
+        <a href="auth.html" class="nav-btn nav-btn-primary">Get Started →</a>
+      </div>
+      <button class="hamburger" id="hamburger" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ── HERO ─────────────────────────────────── -->
+  <section class="hero">
+    <div class="hero-inner">
+      <div class="hero-badge animate-fade-up">✨ Version 1.0.0 now available</div>
+      <img src="https://spotless-orange-flea.myfilebase.com/ipfs/QmTxYFh6onsouXAS3Jw3kBMJkvbdAuf9LYQ7FnTT5f6mnZ"
+           alt="Authn" class="hero-logo animate-fade-up animate-delay-1">
+      <h1 class="hero-title animate-fade-up animate-delay-1">
+        Authentication that<br><span>just works</span>
+      </h1>
+      <p class="hero-subtitle animate-fade-up animate-delay-2">
+        Production-grade, self-hosted authentication with 19 integrated security features.
+        Rival Auth0 and Firebase at <strong>zero cost</strong> — complete code ownership, no vendor lock-in.
+      </p>
+      <div class="hero-badges animate-fade-up animate-delay-2">
+        <span class="badge badge-green">✅ Node ≥ 16</span>
+        <span class="badge badge-blue">🔒 Security 9/10</span>
+        <span class="badge badge-purple">📚 Docs 9/10</span>
+        <span class="badge badge-yellow">⚡ 72% Production Ready</span>
+        <span class="badge badge-green">MIT License</span>
+      </div>
+      <div class="hero-cta animate-fade-up animate-delay-3">
+        <a href="docs.html" class="btn btn-primary">📖 Read the Docs</a>
+        <a href="https://github.com/hanan-bhatti/authn" target="_blank" rel="noopener" class="btn btn-outline">⭐ View on GitHub</a>
+        <a href="auth.html" class="btn btn-ghost">🚀 Live Demo →</a>
+      </div>
+
+      <!-- Quick-start snippet -->
+      <div class="code-block animate-fade-up animate-delay-4" style="text-align:left;max-width:520px;margin:0 auto;">
+        <div class="code-header">
+          <span class="code-lang">bash</span>
+          <button class="code-copy" onclick="copyCode(this)">Copy</button>
+        </div>
+        <pre><span class="code-comment"># Clone &amp; start in 3 steps</span>
+git clone https://github.com/hanan-bhatti/authn.git
+cp .env.example .env   <span class="code-comment"># fill in your secrets</span>
+npm install &amp;&amp; npm start</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── STATS ─────────────────────────────────── -->
+  <section class="section section-alt">
+    <div class="container">
+      <div class="stats-grid">
+        <div class="stat-card animate-fade-up">
+          <div class="stat-icon">🔐</div>
+          <div class="stat-value">19</div>
+          <div class="stat-label">Security Features</div>
+        </div>
+        <div class="stat-card animate-fade-up animate-delay-1">
+          <div class="stat-icon">📡</div>
+          <div class="stat-value">40+</div>
+          <div class="stat-label">REST Endpoints</div>
+        </div>
+        <div class="stat-card animate-fade-up animate-delay-2">
+          <div class="stat-icon">⚙️</div>
+          <div class="stat-value">30+</div>
+          <div class="stat-label">Config Variables</div>
+        </div>
+        <div class="stat-card animate-fade-up animate-delay-3">
+          <div class="stat-icon">💰</div>
+          <div class="stat-value">$0</div>
+          <div class="stat-label">Recurring Cost</div>
+        </div>
+        <div class="stat-card animate-fade-up animate-delay-4">
+          <div class="stat-icon">📝</div>
+          <div class="stat-value">MIT</div>
+          <div class="stat-label">Open Source License</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FEATURES ─────────────────────────────── -->
+  <section class="section" id="features">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-label">Features</div>
+        <h2 class="section-title">Everything you need for auth</h2>
+        <p class="section-desc">Battle-tested authentication primitives so you can focus on building your product, not your auth stack.</p>
+      </div>
+      <div class="features-grid">
+
+        <div class="feature-card animate-fade-up">
+          <div class="feature-icon">🔑</div>
+          <div class="feature-title">Email / Password Auth</div>
+          <p class="feature-desc">bcryptjs with 12 salt rounds, strong-password enforcement, timing-safe comparison, and secure reset flows.</p>
+        </div>
+
+        <div class="feature-card animate-fade-up animate-delay-1">
+          <div class="feature-icon">🛡️</div>
+          <div class="feature-title">Two-Factor Authentication</div>
+          <p class="feature-desc">TOTP (RFC 6238) compatible with Google Authenticator, Authy, and 1Password. Backup codes included.</p>
+        </div>
+
+        <div class="feature-card animate-fade-up animate-delay-2">
+          <div class="feature-icon">🌐</div>
+          <div class="feature-title">Google OAuth 2.0</div>
+          <p class="feature-desc">Firebase Admin SDK integration. One-click social sign-in with automatic account linking.</p>
+        </div>
+
+        <div class="feature-card animate-fade-up">
+          <div class="feature-icon">📱</div>
+          <div class="feature-title">Device Management</div>
+          <p class="feature-desc">Browser fingerprinting, trusted device registration, new-device email alerts, and up to 10 devices per user.</p>
+        </div>
+
+        <div class="feature-card animate-fade-up animate-delay-1">
+          <div class="feature-icon">🗂️</div>
+          <div class="feature-title">Session Management</div>
+          <p class="feature-desc">Up to 5 concurrent JWT sessions. View, revoke, or nuke all sessions from any device.</p>
+        </div>
+
+        <div class="feature-card animate-fade-up animate-delay-2">
+          <div class="feature-icon">⚡</div>
+          <div class="feature-title">Rate Limiting</div>
+          <p class="feature-desc">Multi-layer DDoS protection — 5 auth attempts per 15 min, 1 000 API requests per 15 min, per-user throttling.</p>
+        </div>
+
+        <div class="feature-card animate-fade-up">
+          <div class="feature-icon">🔒</div>
+          <div class="feature-title">RBAC Permissions</div>
+          <p class="feature-desc">4-tier role hierarchy (user → moderator → admin → superadmin) with granular permission inheritance.</p>
+        </div>
+
+        <div class="feature-card animate-fade-up animate-delay-1">
+          <div class="feature-icon">📊</div>
+          <div class="feature-title">Audit Logging</div>
+          <p class="feature-desc">Every security event captured — login, logout, password change, 2FA toggle, device events — with IP & user agent.</p>
+        </div>
+
+        <div class="feature-card animate-fade-up animate-delay-2">
+          <div class="feature-icon">💾</div>
+          <div class="feature-title">Automated Backups</div>
+          <p class="feature-desc">Pre-deletion backups mandatory. AES-256 encryption, Gzip compression, 365-day retention, scheduled via node-cron.</p>
+        </div>
+
+        <div class="feature-card animate-fade-up">
+          <div class="feature-icon">📧</div>
+          <div class="feature-title">Transactional Email</div>
+          <p class="feature-desc">OTP verification, password reset, security alerts, device notifications — all via Nodemailer.</p>
+        </div>
+
+        <div class="feature-card animate-fade-up animate-delay-1">
+          <div class="feature-icon">🖼️</div>
+          <div class="feature-title">Profile & Avatars</div>
+          <p class="feature-desc">Full user profiles with avatar upload, Sharp image processing, WebP conversion, and IPFS/S3 storage.</p>
+        </div>
+
+        <div class="feature-card animate-fade-up animate-delay-2">
+          <div class="feature-icon">📦</div>
+          <div class="feature-title">GDPR Compliance</div>
+          <p class="feature-desc">Full data export, account deletion with data anonymisation, and preference management built in.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ── MATURITY SCORES ───────────────────────── -->
+  <section class="section section-alt" id="maturity">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-label">Maturity</div>
+        <h2 class="section-title">Project maturity by category</h2>
+        <p class="section-desc">Honest assessment of where Authn stands today. Overall score: <strong>6.7 / 10</strong> — production readiness <strong>72 %</strong>.</p>
+      </div>
+      <div class="scores-grid">
+        <div class="score-item">
+          <span class="score-icon">🔒</span>
+          <div class="score-details">
+            <div class="score-label">Security</div>
+            <div class="score-bar-wrap">
+              <div class="score-bar"><div class="score-bar-fill score-bar-fill-green" style="width:90%"></div></div>
+              <span class="score-num">9 / 10</span>
+            </div>
+          </div>
+        </div>
+        <div class="score-item">
+          <span class="score-icon">📚</span>
+          <div class="score-details">
+            <div class="score-label">Documentation</div>
+            <div class="score-bar-wrap">
+              <div class="score-bar"><div class="score-bar-fill score-bar-fill-green" style="width:90%"></div></div>
+              <span class="score-num">9 / 10</span>
+            </div>
+          </div>
+        </div>
+        <div class="score-item">
+          <span class="score-icon">🏗️</span>
+          <div class="score-details">
+            <div class="score-label">Architecture</div>
+            <div class="score-bar-wrap">
+              <div class="score-bar"><div class="score-bar-fill score-bar-fill-blue" style="width:80%"></div></div>
+              <span class="score-num">8 / 10</span>
+            </div>
+          </div>
+        </div>
+        <div class="score-item">
+          <span class="score-icon">👨‍💻</span>
+          <div class="score-details">
+            <div class="score-label">Developer Experience</div>
+            <div class="score-bar-wrap">
+              <div class="score-bar"><div class="score-bar-fill score-bar-fill-blue" style="width:80%"></div></div>
+              <span class="score-num">8 / 10</span>
+            </div>
+          </div>
+        </div>
+        <div class="score-item">
+          <span class="score-icon">🔌</span>
+          <div class="score-details">
+            <div class="score-label">Scalability</div>
+            <div class="score-bar-wrap">
+              <div class="score-bar"><div class="score-bar-fill score-bar-fill-yellow" style="width:65%"></div></div>
+              <span class="score-num">6.5 / 10</span>
+            </div>
+          </div>
+        </div>
+        <div class="score-item">
+          <span class="score-icon">⚡</span>
+          <div class="score-details">
+            <div class="score-label">Performance</div>
+            <div class="score-bar-wrap">
+              <div class="score-bar"><div class="score-bar-fill score-bar-fill-yellow" style="width:60%"></div></div>
+              <span class="score-num">6 / 10</span>
+            </div>
+          </div>
+        </div>
+        <div class="score-item">
+          <span class="score-icon">📊</span>
+          <div class="score-details">
+            <div class="score-label">Monitoring</div>
+            <div class="score-bar-wrap">
+              <div class="score-bar"><div class="score-bar-fill score-bar-fill-red" style="width:40%"></div></div>
+              <span class="score-num">4 / 10</span>
+            </div>
+          </div>
+        </div>
+        <div class="score-item">
+          <span class="score-icon">🧪</span>
+          <div class="score-details">
+            <div class="score-label">Testing</div>
+            <div class="score-bar-wrap">
+              <div class="score-bar"><div class="score-bar-fill score-bar-fill-red" style="width:30%"></div></div>
+              <span class="score-num">3 / 10</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── COMPARISON ───────────────────────────── -->
+  <section class="section" id="compare">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-label">Comparison</div>
+        <h2 class="section-title">Authn vs. commercial alternatives</h2>
+        <p class="section-desc">Self-hosted freedom at zero recurring cost with the same enterprise-grade security.</p>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th>Authn</th>
+              <th>Auth0</th>
+              <th>Firebase Auth</th>
+              <th>AWS Cognito</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Cost</td>
+              <td><strong>Free forever</strong></td>
+              <td>$0.023 / user / month</td>
+              <td>Free tier then usage</td>
+              <td>Free tier then usage</td>
+            </tr>
+            <tr>
+              <td>Code Ownership</td>
+              <td class="check">✅ Full ownership</td>
+              <td class="cross">❌ Vendor-hosted</td>
+              <td class="cross">❌ Google-hosted</td>
+              <td class="cross">❌ AWS-hosted</td>
+            </tr>
+            <tr>
+              <td>Self-hosted</td>
+              <td class="check">✅</td>
+              <td class="cross">❌</td>
+              <td class="cross">❌</td>
+              <td class="cross">❌</td>
+            </tr>
+            <tr>
+              <td>2FA / TOTP</td>
+              <td class="check">✅</td>
+              <td class="check">✅</td>
+              <td class="partial">⚠️ Limited</td>
+              <td class="check">✅</td>
+            </tr>
+            <tr>
+              <td>Device Management</td>
+              <td class="check">✅</td>
+              <td class="partial">⚠️ Basic</td>
+              <td class="cross">❌</td>
+              <td class="partial">⚠️ Basic</td>
+            </tr>
+            <tr>
+              <td>Audit Logging</td>
+              <td class="check">✅ Built-in</td>
+              <td class="check">✅ Paid</td>
+              <td class="cross">❌</td>
+              <td class="check">✅ CloudTrail</td>
+            </tr>
+            <tr>
+              <td>Custom DB Schema</td>
+              <td class="check">✅ Full control</td>
+              <td class="cross">❌</td>
+              <td class="cross">❌</td>
+              <td class="cross">❌</td>
+            </tr>
+            <tr>
+              <td>Open Source</td>
+              <td class="check">✅ MIT</td>
+              <td class="cross">❌</td>
+              <td class="cross">❌</td>
+              <td class="cross">❌</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── QUICK START ───────────────────────────── -->
+  <section class="section section-alt" id="quickstart">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-label">Quick Start</div>
+        <h2 class="section-title">Up and running in minutes</h2>
+        <p class="section-desc">Clone, configure, and launch — no cloud account required.</p>
+      </div>
+
+      <div style="max-width:680px;margin:0 auto;">
+        <div class="tab-nav mb-2">
+          <button class="tab-btn active" onclick="showTab('npm', this)">npm</button>
+          <button class="tab-btn" onclick="showTab('docker', this)">Docker</button>
+        </div>
+
+        <div id="tab-npm" class="tab-panel active">
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">bash</span>
+              <button class="code-copy" onclick="copyCode(this)">Copy</button>
+            </div>
+            <pre><span class="code-comment"># 1. Clone the repo</span>
+git clone https://github.com/hanan-bhatti/authn.git
+cd authn
+
+<span class="code-comment"># 2. Install dependencies</span>
+npm install
+
+<span class="code-comment"># 3. Configure environment</span>
+cp .env.example .env
+<span class="code-comment"># Edit .env with your MongoDB URI, JWT secret, SMTP credentials…</span>
+
+<span class="code-comment"># 4. Start the server</span>
+npm start     <span class="code-comment"># production</span>
+npm run dev   <span class="code-comment"># development (nodemon)</span></pre>
+          </div>
+        </div>
+
+        <div id="tab-docker" class="tab-panel">
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">bash</span>
+              <button class="code-copy" onclick="copyCode(this)">Copy</button>
+            </div>
+            <pre><span class="code-comment"># Build &amp; run with Docker Compose</span>
+git clone https://github.com/hanan-bhatti/authn.git
+cd authn
+cp .env.example .env
+
+<span class="code-comment"># Edit .env, then:</span>
+docker-compose up -d
+
+<span class="code-comment"># The API is available at http://localhost:5000</span></pre>
+          </div>
+        </div>
+
+        <div class="callout callout-info mt-3">
+          <span class="callout-icon">ℹ️</span>
+          <div>Need detailed setup instructions? Check the <a href="docs.html">full documentation</a> — it covers environment variables, MongoDB setup, email config, and deployment guides.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── CTA BANNER ───────────────────────────── -->
+  <section class="section" style="background:linear-gradient(135deg,#1d4ed8,#7c3aed);text-align:center;padding:4rem 1.5rem;">
+    <div class="container">
+      <h2 style="color:#fff;font-size:clamp(1.5rem,3vw,2.25rem);font-weight:800;margin-bottom:0.75rem;">Ready to own your auth stack?</h2>
+      <p style="color:rgba(255,255,255,.8);font-size:1rem;max-width:480px;margin:0 auto 2rem;line-height:1.7;">
+        Self-host Authn today and stop paying per-user fees. Free, open-source, MIT licensed.
+      </p>
+      <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
+        <a href="https://github.com/hanan-bhatti/authn" target="_blank" rel="noopener"
+           style="display:inline-flex;align-items:center;gap:0.5rem;padding:0.75rem 1.75rem;background:#fff;color:#1d4ed8;border-radius:0.75rem;font-weight:700;font-size:0.9rem;transition:all .2s;">
+          ⭐ Star on GitHub
+        </a>
+        <a href="docs.html"
+           style="display:inline-flex;align-items:center;gap:0.5rem;padding:0.75rem 1.75rem;background:rgba(255,255,255,.15);color:#fff;border:1.5px solid rgba(255,255,255,.4);border-radius:0.75rem;font-weight:700;font-size:0.9rem;transition:all .2s;">
+          📖 Read the Docs
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FOOTER ───────────────────────────────── -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="index.html" class="nav-brand" style="font-size:1.1rem;">
+            <img src="https://spotless-orange-flea.myfilebase.com/ipfs/QmTxYFh6onsouXAS3Jw3kBMJkvbdAuf9LYQ7FnTT5f6mnZ" alt="Authn" class="nav-logo">
+            Authn
+          </a>
+          <p>Enterprise-grade self-hosted authentication. MIT licensed. No vendor lock-in. No usage fees.</p>
+        </div>
+        <div>
+          <div class="footer-col-title">Product</div>
+          <ul class="footer-links">
+            <li><a href="index.html#features">Features</a></li>
+            <li><a href="index.html#compare">Comparison</a></li>
+            <li><a href="index.html#quickstart">Quick Start</a></li>
+            <li><a href="changelog.html">Changelog</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="footer-col-title">Developers</div>
+          <ul class="footer-links">
+            <li><a href="docs.html">Documentation</a></li>
+            <li><a href="docs.html#api">API Reference</a></li>
+            <li><a href="docs.html#config">Configuration</a></li>
+            <li><a href="docs.html#deployment">Deployment</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="footer-col-title">Community</div>
+          <ul class="footer-links">
+            <li><a href="https://github.com/hanan-bhatti/authn" target="_blank" rel="noopener">GitHub</a></li>
+            <li><a href="https://github.com/hanan-bhatti/authn/issues" target="_blank" rel="noopener">Issues</a></li>
+            <li><a href="https://github.com/hanan-bhatti/authn/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a></li>
+            <li><a href="contact.html">Contact</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2025 Abdul Hannan Bhatti. MIT License.</span>
+        <div class="footer-social">
+          <a href="https://github.com/hanan-bhatti/authn" target="_blank" rel="noopener" title="GitHub">⭐</a>
+          <a href="mailto:hannanbhatti2006@gmail.com" title="Email">✉️</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Theme
+    const themeBtn = document.getElementById('themeToggle');
+    const root = document.documentElement;
+    const saved = localStorage.getItem('authn-theme');
+    if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      root.setAttribute('data-theme', 'dark');
+      themeBtn.textContent = '☀️';
+    }
+    themeBtn.addEventListener('click', () => {
+      const isDark = root.getAttribute('data-theme') === 'dark';
+      root.setAttribute('data-theme', isDark ? 'light' : 'dark');
+      themeBtn.textContent = isDark ? '🌙' : '☀️';
+      localStorage.setItem('authn-theme', isDark ? 'light' : 'dark');
+    });
+
+    // Hamburger
+    const hamburger = document.getElementById('hamburger');
+    const navLinks = document.getElementById('navLinks');
+    hamburger.addEventListener('click', () => navLinks.classList.toggle('open'));
+
+    // Tabs
+    function showTab(id, btn) {
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('tab-' + id).classList.add('active');
+      btn.classList.add('active');
+    }
+
+    // Copy code
+    function copyCode(btn) {
+      const pre = btn.closest('.code-block').querySelector('pre');
+      navigator.clipboard.writeText(pre.innerText).then(() => {
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy', 2000);
+      });
+    }
+  </script>
+</body>
+</html>
