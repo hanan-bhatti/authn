@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Docs — Authn</title>
+  <meta name="description" content="Complete documentation for Authn — API reference, configuration, deployment guides, and more.">
+  <link rel="icon" href="https://spotless-orange-flea.myfilebase.com/ipfs/QmSaqA9tpYReUdr4Xw3uyvsCts5xTeHKsfdiHDiDjTUN4W" type="image/png">
+  <link rel="stylesheet" href="css/website.css">
+</head>
+<body>
+
+  <!-- ── NAV ─────────────────────────────────── -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">
+        <img src="https://spotless-orange-flea.myfilebase.com/ipfs/QmTxYFh6onsouXAS3Jw3kBMJkvbdAuf9LYQ7FnTT5f6mnZ" alt="Authn Logo" class="nav-logo">
+        Authn
+      </a>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="index.html" class="nav-link">Home</a></li>
+        <li><a href="docs.html" class="nav-link active">Docs</a></li>
+        <li><a href="changelog.html" class="nav-link">Changelog</a></li>
+        <li><a href="contact.html" class="nav-link">Contact</a></li>
+      </ul>
+      <div class="nav-actions">
+        <button class="theme-btn" id="themeToggle" title="Toggle theme">🌙</button>
+        <a href="https://github.com/hanan-bhatti/authn" target="_blank" rel="noopener" class="nav-btn nav-btn-outline">⭐ GitHub</a>
+      </div>
+      <button class="hamburger" id="hamburger" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ── DOCS LAYOUT ──────────────────────────── -->
+  <div class="docs-layout">
+
+    <!-- Sidebar -->
+    <aside class="docs-sidebar">
+      <div class="docs-sidebar-title">Overview</div>
+      <a href="#intro" class="docs-sidebar-link active" onclick="setActive(this)">Introduction</a>
+      <a href="#prerequisites" class="docs-sidebar-link" onclick="setActive(this)">Prerequisites</a>
+      <a href="#quickstart" class="docs-sidebar-link" onclick="setActive(this)">Quick Start</a>
+
+      <div class="docs-sidebar-title">Configuration</div>
+      <a href="#config" class="docs-sidebar-link" onclick="setActive(this)">Environment Variables</a>
+      <a href="#database" class="docs-sidebar-link" onclick="setActive(this)">Database Setup</a>
+      <a href="#email" class="docs-sidebar-link" onclick="setActive(this)">Email Configuration</a>
+
+      <div class="docs-sidebar-title">Authentication</div>
+      <a href="#auth-flows" class="docs-sidebar-link" onclick="setActive(this)">Auth Flows</a>
+      <a href="#jwt" class="docs-sidebar-link" onclick="setActive(this)">JWT Tokens</a>
+      <a href="#oauth" class="docs-sidebar-link" onclick="setActive(this)">Google OAuth</a>
+      <a href="#2fa" class="docs-sidebar-link" onclick="setActive(this)">Two-Factor Auth</a>
+
+      <div class="docs-sidebar-title">Features</div>
+      <a href="#devices" class="docs-sidebar-link" onclick="setActive(this)">Device Management</a>
+      <a href="#sessions" class="docs-sidebar-link" onclick="setActive(this)">Session Management</a>
+      <a href="#rbac" class="docs-sidebar-link" onclick="setActive(this)">RBAC & Permissions</a>
+      <a href="#backups" class="docs-sidebar-link" onclick="setActive(this)">Backups</a>
+
+      <div class="docs-sidebar-title">API</div>
+      <a href="#api" class="docs-sidebar-link" onclick="setActive(this)">API Reference</a>
+      <a href="#rate-limiting" class="docs-sidebar-link" onclick="setActive(this)">Rate Limiting</a>
+      <a href="#errors" class="docs-sidebar-link" onclick="setActive(this)">Error Codes</a>
+
+      <div class="docs-sidebar-title">Operations</div>
+      <a href="#deployment" class="docs-sidebar-link" onclick="setActive(this)">Deployment</a>
+      <a href="#security" class="docs-sidebar-link" onclick="setActive(this)">Security Guide</a>
+      <a href="#faq" class="docs-sidebar-link" onclick="setActive(this)">FAQ</a>
+    </aside>
+
+    <!-- Content -->
+    <main class="docs-content">
+
+      <!-- Intro -->
+      <section id="intro">
+        <h1>Authn Documentation</h1>
+        <p>Welcome to the <strong>Authn</strong> docs — your complete reference for installing, configuring, and using the platform in production.</p>
+
+        <div class="docs-card-grid">
+          <a href="#quickstart" class="docs-card">
+            <span class="docs-card-icon">🚀</span>
+            <div>
+              <div class="docs-card-title">Quick Start</div>
+              <div class="docs-card-desc">Get up and running in under 5 minutes.</div>
+            </div>
+          </a>
+          <a href="#api" class="docs-card">
+            <span class="docs-card-icon">📡</span>
+            <div>
+              <div class="docs-card-title">API Reference</div>
+              <div class="docs-card-desc">Complete REST endpoint documentation.</div>
+            </div>
+          </a>
+          <a href="#config" class="docs-card">
+            <span class="docs-card-icon">⚙️</span>
+            <div>
+              <div class="docs-card-title">Configuration</div>
+              <div class="docs-card-desc">All 30+ environment variables explained.</div>
+            </div>
+          </a>
+          <a href="#deployment" class="docs-card">
+            <span class="docs-card-icon">🚢</span>
+            <div>
+              <div class="docs-card-title">Deployment</div>
+              <div class="docs-card-desc">Docker, Heroku, AWS, DigitalOcean, VPS.</div>
+            </div>
+          </a>
+        </div>
+      </section>
+
+      <!-- Prerequisites -->
+      <section id="prerequisites">
+        <h2>Prerequisites</h2>
+        <ul>
+          <li><strong>Node.js</strong> ≥ 16.0.0</li>
+          <li><strong>npm</strong> ≥ 8.0.0</li>
+          <li><strong>MongoDB</strong> 5+ (Atlas or self-hosted)</li>
+          <li><strong>SMTP provider</strong> — Gmail, Mailgun, SendGrid, etc.</li>
+          <li><em>Optional:</em> Firebase project (for Google OAuth)</li>
+          <li><em>Optional:</em> AWS S3 / Filebase (for avatar storage)</li>
+        </ul>
+      </section>
+
+      <!-- Quick Start -->
+      <section id="quickstart">
+        <h2>Quick Start</h2>
+        <h3>1 — Clone the repository</h3>
+        <pre><code>git clone https://github.com/hanan-bhatti/authn.git
+cd authn</code></pre>
+
+        <h3>2 — Install dependencies</h3>
+        <pre><code>npm install</code></pre>
+
+        <h3>3 — Configure your environment</h3>
+        <pre><code>cp .env.example .env
+# Open .env and fill in your values (see Configuration section)</code></pre>
+
+        <h3>4 — Start the server</h3>
+        <pre><code>npm start        # production
+npm run dev      # development (hot-reload via nodemon)</code></pre>
+
+        <div class="callout callout-tip">
+          <span class="callout-icon">💡</span>
+          <div>The server listens on <code>PORT</code> (default <code>5000</code>). Your API base URL is <code>http://localhost:5000/api</code>.</div>
+        </div>
+      </section>
+
+      <!-- Config -->
+      <section id="config">
+        <h2>Environment Variables</h2>
+        <p>Copy <code>.env.example</code> to <code>.env</code> and fill in the values below.</p>
+
+        <h3>Server</h3>
+        <pre><code>PORT=5000
+NODE_ENV=development          # production | development
+CORS_ORIGIN=http://localhost:3000</code></pre>
+
+        <h3>Database</h3>
+        <pre><code>MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/authn</code></pre>
+
+        <h3>JWT</h3>
+        <pre><code>JWT_SECRET=your-super-secret-32-char-min-key
+JWT_EXPIRE=7d                 # token lifetime
+JWT_REMEMBER_EXPIRE=30d       # "remember me" lifetime</code></pre>
+
+        <h3>Email (Nodemailer)</h3>
+        <pre><code>SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=you@gmail.com
+SMTP_PASS=app-specific-password
+EMAIL_FROM=Authn &lt;you@gmail.com&gt;</code></pre>
+
+        <h3>Google OAuth (Firebase Admin)</h3>
+        <pre><code>FIREBASE_PROJECT_ID=my-project
+FIREBASE_PRIVATE_KEY_ID=abc123
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n"
+FIREBASE_CLIENT_EMAIL=firebase-adminsdk@my-project.iam.gserviceaccount.com</code></pre>
+
+        <h3>Storage (Filebase / S3)</h3>
+        <pre><code>FILEBASE_ACCESS_KEY=your-key
+FILEBASE_SECRET_KEY=your-secret
+FILEBASE_BUCKET=your-bucket</code></pre>
+
+        <div class="callout callout-warn">
+          <span class="callout-icon">⚠️</span>
+          <div>Never commit <code>.env</code> to version control. The <code>.gitignore</code> already excludes it.</div>
+        </div>
+      </section>
+
+      <!-- Database -->
+      <section id="database">
+        <h2>Database Setup</h2>
+        <p>Authn uses <strong>MongoDB</strong> via Mongoose. Any MongoDB 5+ deployment works — MongoDB Atlas is the easiest option.</p>
+        <ol>
+          <li>Create a free cluster at <a href="https://cloud.mongodb.com" target="_blank" rel="noopener">cloud.mongodb.com</a>.</li>
+          <li>Add a database user and whitelist your IP (or <code>0.0.0.0/0</code> for development).</li>
+          <li>Copy the connection string and set <code>MONGODB_URI</code> in <code>.env</code>.</li>
+        </ol>
+        <p>Authn auto-creates all collections and indexes on first start — no migration scripts needed for a fresh install.</p>
+      </section>
+
+      <!-- Email -->
+      <section id="email">
+        <h2>Email Configuration</h2>
+        <p>Authn sends transactional emails for:</p>
+        <ul>
+          <li>Email verification OTP (6 characters, 10-minute expiry)</li>
+          <li>Password reset links (30-minute expiry)</li>
+          <li>New device detection alerts</li>
+          <li>Security event notifications</li>
+        </ul>
+        <h3>Gmail quick-start</h3>
+        <ol>
+          <li>Enable 2-Step Verification on your Google account.</li>
+          <li>Create an <strong>App Password</strong> (Google Account → Security → App passwords).</li>
+          <li>Use that password as <code>SMTP_PASS</code>.</li>
+        </ol>
+        <div class="callout callout-info">
+          <span class="callout-icon">ℹ️</span>
+          <div>For production, prefer a dedicated transactional email service like <strong>Mailgun</strong>, <strong>SendGrid</strong>, or <strong>Postmark</strong> to avoid Gmail sending limits.</div>
+        </div>
+      </section>
+
+      <!-- Auth Flows -->
+      <section id="auth-flows">
+        <h2>Authentication Flows</h2>
+
+        <h3>Registration</h3>
+        <ol>
+          <li><code>POST /api/auth/register</code> with <code>{ email, username, password, fullName }</code></li>
+          <li>Server creates user, sends OTP to email, returns <code>201</code> with JWT.</li>
+          <li>Client calls <code>POST /api/auth/verify-email</code> with the OTP.</li>
+        </ol>
+
+        <h3>Login</h3>
+        <ol>
+          <li><code>POST /api/auth/login</code> with <code>{ identifier, password }</code> (<code>identifier</code> can be email or username).</li>
+          <li>If 2FA is enabled, server responds with <code>requiresTwoFactor: true</code>.</li>
+          <li>Client calls <code>POST /api/auth/verify-2fa</code> with the TOTP code.</li>
+          <li>If device is unrecognised, user receives a device-verification email.</li>
+        </ol>
+
+        <h3>Password Reset</h3>
+        <ol>
+          <li><code>POST /api/auth/forgot-password</code> — sends a reset link.</li>
+          <li><code>POST /api/auth/reset-password</code> — validates token, sets new password, terminates all sessions.</li>
+        </ol>
+      </section>
+
+      <!-- JWT -->
+      <section id="jwt">
+        <h2>JWT Tokens</h2>
+        <p>Authn issues <strong>HS256</strong>-signed JWTs. Tokens are sent via <code>HttpOnly</code> cookie and optionally via <code>Authorization: Bearer &lt;token&gt;</code> header.</p>
+        <pre><code>// Token payload example
+{
+  "userId": "...",
+  "sessionId": "...",
+  "role": "user",
+  "iat": 1700000000,
+  "exp": 1700604800
+}</code></pre>
+        <p>Tokens are validated against the session record on every protected request. Revoking a session immediately invalidates its token.</p>
+      </section>
+
+      <!-- OAuth -->
+      <section id="oauth">
+        <h2>Google OAuth 2.0</h2>
+        <p>Authn uses the <strong>Firebase Admin SDK</strong> to verify Google ID tokens sent from the client.</p>
+        <h3>Setup</h3>
+        <ol>
+          <li>Create a Firebase project at <a href="https://console.firebase.google.com" target="_blank" rel="noopener">console.firebase.google.com</a>.</li>
+          <li>Enable <strong>Google Sign-In</strong> in Authentication → Sign-in methods.</li>
+          <li>Generate a service account key (Project Settings → Service Accounts).</li>
+          <li>Set the Firebase env vars in <code>.env</code>.</li>
+        </ol>
+        <h3>Flow</h3>
+        <ol>
+          <li>Client authenticates with Google and gets an ID token.</li>
+          <li>Client sends <code>POST /api/auth/google</code> with <code>{ idToken }</code>.</li>
+          <li>Server verifies the token, creates/links the user, returns a JWT session.</li>
+        </ol>
+      </section>
+
+      <!-- 2FA -->
+      <section id="2fa">
+        <h2>Two-Factor Authentication</h2>
+        <p>Authn implements <strong>RFC 6238 TOTP</strong> (the same standard used by Google Authenticator, Authy, and 1Password).</p>
+        <h3>Enable 2FA</h3>
+        <ol>
+          <li><code>POST /api/auth/2fa/setup</code> — server returns a <code>otpauth://</code> URI and QR code data URL.</li>
+          <li>User scans the QR code in their authenticator app.</li>
+          <li><code>POST /api/auth/2fa/enable</code> with <code>{ token }</code> — verifies and activates 2FA.</li>
+        </ol>
+        <h3>Backup codes</h3>
+        <p>8 alphanumeric one-time backup codes are generated on setup. Each code can only be used once. Regenerate at any time via <code>POST /api/auth/2fa/backup-codes/regenerate</code>.</p>
+        <h3>Rate limiting</h3>
+        <p>5 failed 2FA attempts trigger a 15-minute lockout on that account.</p>
+      </section>
+
+      <!-- Devices -->
+      <section id="devices">
+        <h2>Device Management</h2>
+        <p>Authn fingerprints each device using browser, OS, IP, and geolocation data, generating a unique SHA-256 device ID.</p>
+        <ul>
+          <li>Up to <strong>10 trusted devices</strong> per user.</li>
+          <li>New devices trigger an email alert with a 24-hour verification token.</li>
+          <li>Devices inactive for 90 days are automatically removed.</li>
+        </ul>
+        <h3>Key endpoints</h3>
+        <pre><code>GET  /api/devices              — list all devices
+POST /api/devices/verify        — verify a new device
+POST /api/devices/:id/trust     — mark as trusted
+DELETE /api/devices/:id         — remove a device</code></pre>
+      </section>
+
+      <!-- Sessions -->
+      <section id="sessions">
+        <h2>Session Management</h2>
+        <p>Up to <strong>5 concurrent active sessions</strong> per user. Oldest session is terminated when the limit is exceeded.</p>
+        <h3>Key endpoints</h3>
+        <pre><code>GET    /api/sessions             — list all active sessions
+DELETE /api/sessions/:id         — revoke a specific session
+DELETE /api/sessions             — revoke all sessions (logout everywhere)
+POST   /api/auth/logout          — logout current session</code></pre>
+      </section>
+
+      <!-- RBAC -->
+      <section id="rbac">
+        <h2>RBAC &amp; Permissions</h2>
+        <p>Authn ships with a 4-tier role system:</p>
+        <pre><code>user  →  moderator  →  admin  →  superadmin</code></pre>
+        <p>Each role inherits all permissions of the roles below it. Roles are stored on the User model and checked via the <code>authorize(...roles)</code> middleware.</p>
+        <h3>Protecting routes</h3>
+        <pre><code>// In your Express route file:
+const { protect, authorize } = require('./middleware/auth');
+
+router.get('/admin/users', protect, authorize('admin', 'superadmin'), handler);</code></pre>
+      </section>
+
+      <!-- Backups -->
+      <section id="backups">
+        <h2>Automated Backups</h2>
+        <ul>
+          <li><strong>Pre-deletion backups</strong> — mandatory before account deletion.</li>
+          <li><strong>Scheduled backups</strong> — via <code>node-cron</code> (configurable interval).</li>
+          <li><strong>Encryption</strong> — AES-256 optional encryption.</li>
+          <li><strong>Compression</strong> — Gzip by default.</li>
+          <li><strong>Retention</strong> — 365 days (configurable).</li>
+        </ul>
+        <h3>Manual trigger</h3>
+        <pre><code>POST /api/backup/trigger     — create a manual backup
+GET  /api/backup/status      — check backup service status</code></pre>
+      </section>
+
+      <!-- API -->
+      <section id="api">
+        <h2>API Reference</h2>
+        <p>Base URL: <code>http://localhost:5000/api</code></p>
+
+        <h3>Authentication</h3>
+        <pre><code>POST /api/auth/register        — create account
+POST /api/auth/login           — login (email/username + password)
+POST /api/auth/logout          — logout current session
+POST /api/auth/verify-email    — verify email with OTP
+POST /api/auth/forgot-password — send reset link
+POST /api/auth/reset-password  — set new password with token
+POST /api/auth/google          — sign in with Google ID token
+
+POST /api/auth/2fa/setup       — generate TOTP QR code
+POST /api/auth/2fa/enable      — activate 2FA
+POST /api/auth/2fa/disable     — disable 2FA
+POST /api/auth/verify-2fa      — verify TOTP during login
+POST /api/auth/2fa/backup-codes/regenerate</code></pre>
+
+        <h3>User Profile</h3>
+        <pre><code>GET  /api/users/me             — current user profile
+PUT  /api/users/me             — update profile
+PUT  /api/users/me/password    — change password
+POST /api/users/me/avatar      — upload avatar
+GET  /api/users/me/export      — GDPR data export
+DELETE /api/users/me           — delete account</code></pre>
+
+        <h3>Sessions</h3>
+        <pre><code>GET    /api/sessions
+DELETE /api/sessions/:id
+DELETE /api/sessions</code></pre>
+
+        <h3>Devices</h3>
+        <pre><code>GET    /api/devices
+POST   /api/devices/verify
+POST   /api/devices/:id/trust
+DELETE /api/devices/:id</code></pre>
+
+        <h3>Audit &amp; Analytics</h3>
+        <pre><code>GET /api/users/me/audit-log    — last 50 security events
+GET /api/users/me/analytics    — session stats, device counts</code></pre>
+
+        <h3>Response format</h3>
+        <pre><code>// Success
+{ "success": true, "message": "...", "data": { ... }, "timestamp": "..." }
+
+// Error
+{ "success": false, "error": "...", "message": "...", "code": "ERROR_CODE" }</code></pre>
+      </section>
+
+      <!-- Rate limiting -->
+      <section id="rate-limiting">
+        <h2>Rate Limiting</h2>
+        <ul>
+          <li><strong>Global API:</strong> 1 000 requests / 15 minutes</li>
+          <li><strong>Auth endpoints:</strong> 5 requests / 15 minutes</li>
+          <li><strong>Account lockout:</strong> 10 failed logins → 30-minute lockout</li>
+          <li><strong>2FA lockout:</strong> 5 failed attempts → 15-minute lockout</li>
+        </ul>
+        <p>Rate-limit headers are always returned:</p>
+        <pre><code>X-RateLimit-Limit: 1000
+X-RateLimit-Remaining: 999
+X-RateLimit-Reset: 2025-01-01T00:15:00.000Z</code></pre>
+      </section>
+
+      <!-- Errors -->
+      <section id="errors">
+        <h2>Error Codes</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>HTTP</th><th>Code</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td>400</td><td>VALIDATION_ERROR</td><td>Invalid input data</td></tr>
+              <tr><td>401</td><td>UNAUTHORIZED</td><td>Missing or invalid token</td></tr>
+              <tr><td>401</td><td>INVALID_CREDENTIALS</td><td>Wrong email/password</td></tr>
+              <tr><td>401</td><td>ACCOUNT_LOCKED</td><td>Too many failed attempts</td></tr>
+              <tr><td>401</td><td>EMAIL_NOT_VERIFIED</td><td>Email verification required</td></tr>
+              <tr><td>401</td><td>TWO_FACTOR_REQUIRED</td><td>2FA code required</td></tr>
+              <tr><td>403</td><td>FORBIDDEN</td><td>Insufficient permissions</td></tr>
+              <tr><td>404</td><td>NOT_FOUND</td><td>Resource not found</td></tr>
+              <tr><td>409</td><td>DUPLICATE_EMAIL</td><td>Email already registered</td></tr>
+              <tr><td>429</td><td>RATE_LIMIT_EXCEEDED</td><td>Too many requests</td></tr>
+              <tr><td>500</td><td>INTERNAL_ERROR</td><td>Server error</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Deployment -->
+      <section id="deployment">
+        <h2>Deployment</h2>
+        <h3>Traditional VPS / Server</h3>
+        <pre><code>git clone https://github.com/hanan-bhatti/authn.git
+cd authn &amp;&amp; npm install --production
+cp .env.example .env  # configure
+NODE_ENV=production npm start
+
+# Keep it running with PM2
+npm install -g pm2
+pm2 start server.js --name authn
+pm2 save &amp;&amp; pm2 startup</code></pre>
+
+        <h3>Heroku</h3>
+        <pre><code>heroku create my-authn-app
+heroku config:set $(cat .env | xargs)
+git push heroku main</code></pre>
+
+        <h3>Docker</h3>
+        <pre><code>docker build -t authn .
+docker run -d -p 5000:5000 --env-file .env authn</code></pre>
+
+        <div class="callout callout-warn">
+          <span class="callout-icon">⚠️</span>
+          <div>Always set <code>NODE_ENV=production</code>, use a strong <code>JWT_SECRET</code>, and serve behind HTTPS (nginx / Caddy / Cloudflare).</div>
+        </div>
+      </section>
+
+      <!-- Security -->
+      <section id="security">
+        <h2>Security Guide</h2>
+        <ul>
+          <li>HTTP headers hardened with <strong>Helmet</strong> (CSP, XSS, Clickjacking, MIME sniffing).</li>
+          <li>Passwords hashed with <strong>bcryptjs</strong> at 12 salt rounds.</li>
+          <li>JWTs signed with HS256 and validated on every request.</li>
+          <li>CORS restricted to whitelisted origins via <code>CORS_ORIGIN</code>.</li>
+          <li>All auth events recorded in the audit log.</li>
+          <li>Sensitive fields (password, tokens, backup codes) excluded from API responses via Mongoose <code>select: false</code>.</li>
+          <li>Account deletion anonymises data before removal.</li>
+        </ul>
+        <p>To report a security vulnerability, email <a href="mailto:hannanbhatti2006@gmail.com">hannanbhatti2006@gmail.com</a> with subject <code>[SECURITY]</code>. Do not open a public issue.</p>
+      </section>
+
+      <!-- FAQ -->
+      <section id="faq">
+        <h2>FAQ</h2>
+
+        <h3>Can I use Authn without Google OAuth?</h3>
+        <p>Yes. Simply leave the Firebase environment variables empty. The Google sign-in endpoint will return an error if called, but all other features work normally.</p>
+
+        <h3>How do I add a new OAuth provider?</h3>
+        <p>GitHub, Facebook, Twitter, and LinkedIn support is planned for Q2 2025. In the meantime you can implement a custom strategy following the Google OAuth pattern in <code>routes/auth.js</code>.</p>
+
+        <h3>Where are avatars stored?</h3>
+        <p>Avatars are processed with <strong>Sharp</strong> (resized, converted to WebP) and uploaded to <strong>Filebase</strong> (IPFS-backed S3-compatible storage). Set <code>FILEBASE_*</code> env vars to enable this feature.</p>
+
+        <h3>Is there an admin UI?</h3>
+        <p>An admin dashboard UI is on the roadmap. Currently, admin operations are performed via the API with an <code>admin</code> or <code>superadmin</code> role token.</p>
+
+        <h3>How do I run the tests?</h3>
+        <pre><code>npm test</code></pre>
+
+        <h3>How do I contribute?</h3>
+        <p>See <a href="https://github.com/hanan-bhatti/authn/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">CONTRIBUTING.md</a> for the full guide. PRs welcome!</p>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ── FOOTER ───────────────────────────────── -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-bottom">
+        <span>© 2025 Abdul Hannan Bhatti. MIT License.</span>
+        <div class="footer-social">
+          <a href="https://github.com/hanan-bhatti/authn" target="_blank" rel="noopener" title="GitHub">⭐</a>
+          <a href="mailto:hannanbhatti2006@gmail.com" title="Email">✉️</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Theme
+    const themeBtn = document.getElementById('themeToggle');
+    const root = document.documentElement;
+    const saved = localStorage.getItem('authn-theme');
+    if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      root.setAttribute('data-theme', 'dark');
+      themeBtn.textContent = '☀️';
+    }
+    themeBtn.addEventListener('click', () => {
+      const isDark = root.getAttribute('data-theme') === 'dark';
+      root.setAttribute('data-theme', isDark ? 'light' : 'dark');
+      themeBtn.textContent = isDark ? '🌙' : '☀️';
+      localStorage.setItem('authn-theme', isDark ? 'light' : 'dark');
+    });
+
+    // Hamburger
+    const hamburger = document.getElementById('hamburger');
+    const navLinks = document.getElementById('navLinks');
+    hamburger.addEventListener('click', () => navLinks.classList.toggle('open'));
+
+    // Sidebar active link
+    function setActive(el) {
+      document.querySelectorAll('.docs-sidebar-link').forEach(l => l.classList.remove('active'));
+      el.classList.add('active');
+    }
+
+    // Highlight sidebar on scroll
+    const sections = document.querySelectorAll('section[id]');
+    const sideLinks = document.querySelectorAll('.docs-sidebar-link');
+    function onScroll() {
+      let current = '';
+      sections.forEach(s => {
+        if (window.scrollY >= s.offsetTop - 120) current = s.id;
+      });
+      sideLinks.forEach(l => {
+        l.classList.toggle('active', l.getAttribute('href') === '#' + current);
+      });
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+  </script>
+</body>
+</html>

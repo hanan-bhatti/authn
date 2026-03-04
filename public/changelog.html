@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Changelog — Authn</title>
+  <meta name="description" content="All notable changes to Authn, following Semantic Versioning.">
+  <link rel="icon" href="https://spotless-orange-flea.myfilebase.com/ipfs/QmSaqA9tpYReUdr4Xw3uyvsCts5xTeHKsfdiHDiDjTUN4W" type="image/png">
+  <link rel="stylesheet" href="css/website.css">
+</head>
+<body>
+
+  <!-- ── NAV ─────────────────────────────────── -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">
+        <img src="https://spotless-orange-flea.myfilebase.com/ipfs/QmTxYFh6onsouXAS3Jw3kBMJkvbdAuf9LYQ7FnTT5f6mnZ" alt="Authn Logo" class="nav-logo">
+        Authn
+      </a>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="index.html" class="nav-link">Home</a></li>
+        <li><a href="docs.html" class="nav-link">Docs</a></li>
+        <li><a href="changelog.html" class="nav-link active">Changelog</a></li>
+        <li><a href="contact.html" class="nav-link">Contact</a></li>
+      </ul>
+      <div class="nav-actions">
+        <button class="theme-btn" id="themeToggle" title="Toggle theme">🌙</button>
+        <a href="https://github.com/hanan-bhatti/authn" target="_blank" rel="noopener" class="nav-btn nav-btn-outline">⭐ GitHub</a>
+      </div>
+      <button class="hamburger" id="hamburger" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ── HEADER ────────────────────────────────── -->
+  <div style="background:linear-gradient(160deg,var(--bg) 0%,var(--bg-alt) 100%);padding:3.5rem 1.5rem 3rem;text-align:center;border-bottom:1px solid var(--border);">
+    <div class="section-label" style="margin-bottom:.75rem;">Changelog</div>
+    <h1 style="font-size:clamp(1.75rem,4vw,2.75rem);font-weight:800;color:var(--text);margin-bottom:.75rem;letter-spacing:-.02em;">All releases</h1>
+    <p style="color:var(--text-muted);font-size:1rem;max-width:520px;margin:0 auto 1.5rem;line-height:1.7;">
+      Following <a href="https://keepachangelog.com" target="_blank" rel="noopener">Keep a Changelog</a> and
+      <a href="https://semver.org" target="_blank" rel="noopener">Semantic Versioning</a>.
+    </p>
+    <!-- Version jump links -->
+    <div style="display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;">
+      <a href="#unreleased" class="badge badge-purple">Unreleased</a>
+      <a href="#v1-0-0" class="badge badge-green">v1.0.0</a>
+      <a href="#v0-9-0" class="badge badge-yellow">v0.9.0-beta</a>
+      <a href="#v0-8-0" class="badge badge-yellow">v0.8.0-alpha</a>
+      <a href="#v0-5-0" class="badge badge-yellow">v0.5.0-alpha</a>
+      <a href="#v0-1-0" class="badge badge-yellow">v0.1.0-alpha</a>
+    </div>
+  </div>
+
+  <!-- ── TIMELINE ──────────────────────────────── -->
+  <section class="section">
+    <div class="container">
+      <div class="changelog-timeline">
+
+        <!-- UNRELEASED -->
+        <div class="changelog-entry" id="unreleased">
+          <div class="changelog-dot changelog-dot-minor"></div>
+          <div class="changelog-meta">
+            <span class="version-badge version-alpha">Unreleased</span>
+          </div>
+          <div class="changelog-title">Coming soon 🔮</div>
+          <div class="changelog-section">
+            <div class="changelog-section-title cl-added">✨ Planned</div>
+            <ul class="changelog-list">
+              <li>Magic link authentication (passwordless email login)</li>
+              <li>SMS-based OTP</li>
+              <li>Additional OAuth providers — Facebook, GitHub, Twitter, LinkedIn</li>
+              <li>Admin dashboard UI</li>
+              <li>WebAuthn / FIDO2 biometric support</li>
+              <li>GraphQL API</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- 1.0.0 -->
+        <div class="changelog-entry" id="v1-0-0">
+          <div class="changelog-dot"></div>
+          <div class="changelog-meta">
+            <span class="version-badge version-major">v1.0.0</span>
+            <span class="changelog-date">2025-11-06</span>
+          </div>
+          <div class="changelog-title">🎉 Initial Public Release</div>
+          <p style="font-size:.875rem;color:var(--text-muted);margin:.5rem 0 1rem;line-height:1.6;">
+            The first stable release of Authn — a comprehensive authentication system with enterprise-grade security features, full documentation, and a polished developer experience.
+          </p>
+
+          <div class="changelog-section">
+            <div class="changelog-section-title cl-added">✨ Added — Authentication &amp; Security</div>
+            <ul class="changelog-list">
+              <li>Email/password registration with bcryptjs hashing (12 salt rounds)</li>
+              <li>Login with username <em>or</em> email, "Remember Me" (30-day sessions)</li>
+              <li>JWT-based stateless authentication with configurable expiration</li>
+              <li>Password reset flow with secure single-use tokens (30 min expiry)</li>
+              <li>Email verification with 6-character alphanumeric OTP (10 min expiry)</li>
+              <li>Google OAuth 2.0 via Firebase Admin SDK</li>
+              <li>TOTP-based 2FA with QR code setup, 8-digit backup codes, and progressive lockout</li>
+              <li>Session-based 2FA verification with 5-minute grace period</li>
+              <li>Device fingerprinting — browser, OS, IP, geolocation, unique SHA-256 device ID</li>
+              <li>Trusted device workflow with 24-hour verification tokens and email alerts</li>
+              <li>Up to 5 concurrent sessions per user; individual and bulk revocation</li>
+              <li>Global rate limiting (1 000 req / 15 min) and auth limiting (5 req / 15 min)</li>
+              <li>Progressive account lockout — 30 min after 10 failed logins</li>
+              <li>Helmet security headers — CSP, XSS protection, Clickjacking, MIME sniffing</li>
+              <li>CORS with whitelist-based origin control</li>
+            </ul>
+          </div>
+
+          <div class="changelog-section">
+            <div class="changelog-section-title cl-added">✨ Added — User Management</div>
+            <ul class="changelog-list">
+              <li>Full user profiles: name, username, email, phone, bio, website, location</li>
+              <li>Avatar upload with Sharp processing — thumbnail, small, medium, large in WebP</li>
+              <li>IPFS / S3 storage via Filebase</li>
+              <li>Account deletion with mandatory pre-deletion backup + data anonymisation</li>
+              <li>Account recovery within grace period</li>
+              <li>GDPR-compliant complete data export</li>
+              <li>4-tier RBAC: user → moderator → admin → superadmin</li>
+              <li>Granular device-level permission tracking (location, camera, microphone, notifications)</li>
+              <li>Language, timezone, theme (light/dark/auto), notification, and privacy preferences</li>
+            </ul>
+          </div>
+
+          <div class="changelog-section">
+            <div class="changelog-section-title cl-added">✨ Added — Monitoring &amp; Data</div>
+            <ul class="changelog-list">
+              <li>Audit logging for all security events (last 50 entries, includes IP + user agent)</li>
+              <li>User analytics: session counts, durations, device counts, login history</li>
+              <li>In-app notification system (last 20 notifications, unread count)</li>
+              <li>Automated backup system with AES-256 encryption and Gzip compression (365-day retention)</li>
+              <li>Scheduled cleanup via node-cron — expired sessions, stale tokens, old backups, unused devices</li>
+            </ul>
+          </div>
+
+          <div class="changelog-section">
+            <div class="changelog-section-title cl-added">✨ Added — UI &amp; DX</div>
+            <ul class="changelog-list">
+              <li>Modern auth pages: login, register, email verification, password reset, 2FA, device verification</li>
+              <li>Full user dashboard with security centre, session manager, and audit log viewer</li>
+              <li>Dark mode, smooth animations, responsive design</li>
+              <li>RESTful API with consistent <code>ApiResponse</code> / <code>ApiError</code> format</li>
+              <li>Input validation via express-validator; standardised error codes</li>
+              <li>ESLint configuration, Nodemon dev server, comprehensive README and API docs</li>
+            </ul>
+          </div>
+
+          <div class="changelog-section">
+            <div class="changelog-section-title cl-changed">🔄 Changed</div>
+            <ul class="changelog-list">
+              <li>Migrated Google OAuth verification to Firebase Admin SDK for better security</li>
+              <li>Service-oriented architecture refactor</li>
+              <li>Consistent error responses across all endpoints using <code>ApiResponse</code></li>
+              <li>Enhanced device fingerprinting with geolocation support</li>
+              <li>Optimised session management</li>
+            </ul>
+          </div>
+
+          <div class="changelog-section">
+            <div class="changelog-section-title cl-fixed">🐛 Fixed</div>
+            <ul class="changelog-list">
+              <li>Duplicate sessions bug in concurrent login scenarios</li>
+              <li>Timezone issues in token expiration calculation</li>
+              <li>Email template rendering on some SMTP servers</li>
+              <li>Race condition in 2FA backup code usage</li>
+              <li>CORS issues with certain frontend frameworks</li>
+            </ul>
+          </div>
+
+          <div class="changelog-section">
+            <div class="changelog-section-title cl-security">🔒 Security</div>
+            <ul class="changelog-list">
+              <li>bcryptjs 12-round password hashing</li>
+              <li>Timing-safe password comparison</li>
+              <li>CSRF protection for state-changing operations</li>
+              <li>Progressive account lockout</li>
+              <li>Secure token generation for password reset</li>
+              <li>Device fingerprinting for anomaly detection</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- 0.9.0-beta -->
+        <div class="changelog-entry" id="v0-9-0">
+          <div class="changelog-dot changelog-dot-minor"></div>
+          <div class="changelog-meta">
+            <span class="version-badge version-beta">v0.9.0-beta</span>
+            <span class="changelog-date">2025-10-25</span>
+          </div>
+          <div class="changelog-title">Beta Release</div>
+
+          <div class="changelog-section">
+            <div class="changelog-section-title cl-added">✨ Added</div>
+            <ul class="changelog-list">
+              <li>Beta release for early testing</li>
+              <li>Core authentication functionality</li>
+              <li>Basic user profile management</li>
+              <li>Email verification flow</li>
+              <li>Password reset functionality</li>
+              <li>JWT token generation and verification</li>
+            </ul>
+          </div>
+
+          <div class="changelog-section">
+            <div class="changelog-section-title cl-changed">🔄 Changed</div>
+            <ul class="changelog-list">
+              <li>Improved error handling</li>
+              <li>Enhanced validation messages</li>
+              <li>Refactored middleware structure</li>
+            </ul>
+          </div>
+
+          <div class="changelog-section">
+            <div class="changelog-section-title cl-fixed">🐛 Fixed</div>
+            <ul class="changelog-list">
+              <li>Token expiration edge cases</li>
+              <li>Email sending failures on certain SMTP configurations</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- 0.8.0-alpha -->
+        <div class="changelog-entry" id="v0-8-0">
+          <div class="changelog-dot changelog-dot-patch"></div>
+          <div class="changelog-meta">
+            <span class="version-badge version-alpha">v0.8.0-alpha</span>
+            <span class="changelog-date">2025-10-20</span>
+          </div>
+          <div class="changelog-title">Social Login &amp; Security Middleware</div>
+
+          <div class="changelog-section">
+            <div class="changelog-section-title cl-added">✨ Added</div>
+            <ul class="changelog-list">
+              <li>Social login framework with Google OAuth 2.0</li>
+              <li>Security middleware integration (Helmet, Rate Limiting)</li>
+              <li>CORS support for cross-origin requests</li>
+              <li>Initial permission system model</li>
+              <li>Device fingerprinting prototype</li>
+            </ul>
+          </div>
+
+          <div class="changelog-section">
+            <div class="changelog-section-title cl-changed">🔄 Changed</div>
+            <ul class="changelog-list">
+              <li>Database schema improvements</li>
+              <li>API route restructuring</li>
+              <li>Enhanced security headers</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- 0.5.0-alpha -->
+        <div class="changelog-entry" id="v0-5-0">
+          <div class="changelog-dot changelog-dot-patch"></div>
+          <div class="changelog-meta">
+            <span class="version-badge version-alpha">v0.5.0-alpha</span>
+            <span class="changelog-date">2025-09-15</span>
+          </div>
+          <div class="changelog-title">JWT Authentication Core</div>
+
+          <div class="changelog-section">
+            <div class="changelog-section-title cl-added">✨ Added</div>
+            <ul class="changelog-list">
+              <li>JWT authentication core implementation</li>
+              <li>Password hashing with bcryptjs</li>
+              <li>Protected route middleware</li>
+              <li>Authentication and user route separation</li>
+              <li>Basic session management</li>
+            </ul>
+          </div>
+
+          <div class="changelog-section">
+            <div class="changelog-section-title cl-changed">🔄 Changed</div>
+            <ul class="changelog-list">
+              <li>Modularized authentication logic</li>
+              <li>Improved code organization</li>
+            </ul>
+          </div>
+
+          <div class="changelog-section">
+            <div class="changelog-section-title cl-fixed">🐛 Fixed</div>
+            <ul class="changelog-list">
+              <li>Token verification edge cases</li>
+              <li>Session cleanup issues</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- 0.1.0-alpha -->
+        <div class="changelog-entry" id="v0-1-0">
+          <div class="changelog-dot changelog-dot-patch"></div>
+          <div class="changelog-meta">
+            <span class="version-badge version-alpha">v0.1.0-alpha</span>
+            <span class="changelog-date">2025-08-30</span>
+          </div>
+          <div class="changelog-title">🌱 Initial Project Setup</div>
+
+          <div class="changelog-section">
+            <div class="changelog-section-title cl-added">✨ Added</div>
+            <ul class="changelog-list">
+              <li>Initial project setup with Node.js and Express.js</li>
+              <li>Basic server structure</li>
+              <li>MongoDB connection with Mongoose</li>
+              <li>User model schema</li>
+              <li>ESLint configuration</li>
+              <li>Nodemon for development</li>
+            </ul>
+          </div>
+        </div>
+
+      </div><!-- /changelog-timeline -->
+
+      <!-- Upgrade guide callout -->
+      <div style="max-width:800px;margin:3rem auto 0;">
+        <div class="callout callout-info">
+          <span class="callout-icon">📋</span>
+          <div>
+            <strong>Upgrading from 0.9.0-beta to 1.0.0?</strong><br>
+            Session schema has new fields — run <code>npm run migrate:sessions</code>.
+            New Firebase env vars are required for Google OAuth. See the
+            <a href="https://github.com/hanan-bhatti/authn/blob/main/CHANGELOG.md" target="_blank" rel="noopener">full CHANGELOG</a> for migration steps.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── FOOTER ───────────────────────────────── -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-bottom">
+        <span>© 2025 Abdul Hannan Bhatti. MIT License.</span>
+        <div class="footer-social">
+          <a href="https://github.com/hanan-bhatti/authn" target="_blank" rel="noopener" title="GitHub">⭐</a>
+          <a href="mailto:hannanbhatti2006@gmail.com" title="Email">✉️</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const themeBtn = document.getElementById('themeToggle');
+    const root = document.documentElement;
+    const saved = localStorage.getItem('authn-theme');
+    if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      root.setAttribute('data-theme', 'dark');
+      themeBtn.textContent = '☀️';
+    }
+    themeBtn.addEventListener('click', () => {
+      const isDark = root.getAttribute('data-theme') === 'dark';
+      root.setAttribute('data-theme', isDark ? 'light' : 'dark');
+      themeBtn.textContent = isDark ? '🌙' : '☀️';
+      localStorage.setItem('authn-theme', isDark ? 'light' : 'dark');
+    });
+
+    const hamburger = document.getElementById('hamburger');
+    const navLinks = document.getElementById('navLinks');
+    hamburger.addEventListener('click', () => navLinks.classList.toggle('open'));
+  </script>
+</body>
+</html>
